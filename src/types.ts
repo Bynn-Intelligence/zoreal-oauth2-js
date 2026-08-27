@@ -39,7 +39,12 @@ export type NonOAuthError = {
 /** How the holder reached this login. */
 export type SelectBy = 'qr' | 'app_link' | 'device' | 'session';
 
-/** How the login was actually authenticated. Describes what happened, never what was requested. */
+/**
+ * How the login was actually authenticated. Describes what happened, never
+ * what was requested: 'zoreal.live' means a fresh liveness capture was passed
+ * for this login. As acr_values it is a request; only the signed acr claim in
+ * the ID token confirms it, so verify that claim on your backend.
+ */
 export type AcrValue = 'zoreal.live' | 'zoreal.device' | 'zoreal.session';
 
 export interface PairingState {
@@ -100,7 +105,12 @@ export interface StartLoginOptions {
   issuer?: string;
   /** Defaults to 'openid'. Scopes that return personal data require flow: 'auth-code'. */
   scope?: string;
-  /** Ask for a specific assurance. Omit to accept the default, zoreal.device. */
+  /**
+   * Ask for a specific assurance. 'zoreal.live' requires a fresh liveness
+   * capture in the ZOREAL ID app before the login can complete. Advisory:
+   * your backend must verify the signed acr claim in the ID token. Omit to
+   * accept the default, zoreal.device.
+   */
   acr_values?: AcrValue | AcrValue[];
   /** Seconds. Forces re-authentication when auth_time is older. */
   max_age?: number;
