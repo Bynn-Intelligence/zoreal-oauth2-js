@@ -15,13 +15,6 @@ React package is what that wrapper looks like when it is finished.
 your wrapper or plain JS           the UI: render what onState carries
 ```
 
-## Status
-
-Early release. The package implements wire protocol v1. The hosted ZOREAL
-login service is still rolling out, so treat this as a preview: the API is
-stable, but end-to-end sign-in against production is not available everywhere
-yet. This note is removed once the service is generally available.
-
 ## Install
 
 ```sh
