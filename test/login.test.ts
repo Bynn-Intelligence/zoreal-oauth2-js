@@ -55,9 +55,27 @@ afterEach(() => {
  */
 const useFakePollTimers = () => vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
 
-/** Lets the non-timer async work (PKCE digest, stubbed fetch) settle. */
+/**
+ * Lets the non-timer async work (PKCE digest, stubbed fetch) settle. The
+ * WebCrypto digest resolves off the libuv threadpool, which on a loaded CI
+ * runner can take many event-loop turns — so the budget is generous, and a
+ * test awaiting a SPECIFIC effect should use `until()` rather than assume any
+ * fixed count is enough.
+ */
 const flush = async () => {
-  for (let i = 0; i < 25; i++) await new Promise((resolve) => setImmediate(resolve));
+  for (let i = 0; i < 100; i++) await new Promise((resolve) => setImmediate(resolve));
+};
+
+/**
+ * Yields real macrotasks until `predicate` holds (or a generous cap), so work
+ * that lands off the event loop — the crypto.subtle digest above all — has
+ * actually completed instead of being assumed done after N ticks. This is what
+ * keeps a slow runner from reading state before onState has fired.
+ */
+const until = async (predicate: () => boolean) => {
+  for (let i = 0; i < 1000 && !predicate(); i++) {
+    await new Promise((resolve) => setImmediate(resolve));
+  }
 };
 
 describe('startLogin, browser-direct', () => {
@@ -178,7 +196,11 @@ describe('startLogin, browser-direct', () => {
       issuer: 'https://id.zoreal.test',
       onState: (s) => (seen = s),
     });
-    await flush();
+    // Wait for the pairing to actually start (onState fired) rather than a
+    // fixed tick count: on a slow runner flush() can return first, leaving
+    // `seen` undefined — and the throw that followed leaked this login's
+    // pending pair fetch into the next test's fetch spy.
+    await until(() => seen !== undefined);
 
     seen!.cancel!();
     await expect(handle.promise).rejects.toMatchObject({ name: 'AbortError' });
@@ -204,7 +226,8 @@ describe('startLogin, auth-code', () => {
     expect(result.app_state).toBe('return-to=/checkout');
 
     // The verifier and nonce are the ones the pairing request was built from.
-    const pairBody = JSON.parse(calls[0].init!.body as string);
+    const pairCall = calls.find((c) => c.url.endsWith('/pair'))!;
+    const pairBody = JSON.parse(pairCall.init!.body as string);
     expect(pairBody.redirect_uri).toBe('https://rp.example/callback');
     expect(pairBody.nonce).toBe(result.nonce);
     expect(pairBody.code_challenge).toBe(await challengeS256(result.code_verifier));
