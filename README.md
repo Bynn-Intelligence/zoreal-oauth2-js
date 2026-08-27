@@ -89,11 +89,8 @@ const handle = startLogin({
   flow: 'auth-code',
   clientId: 'ast_your_asset_id',
   scope: 'openid email profile.name',
-  onState: (s) => {
-    // Render the pairing UI from this: s.qrUrl in an <img>, s.status as text,
-    // s.cancel on your close button. Every callback carries all of it.
-    renderPairing(s);
-  },
+  // The QR, its live status, the countdown and the cancel wiring are drawn
+  // by this package. Nothing to render, nothing to translate.
 });
 
 const { code, code_verifier, nonce } = await handle.promise;
@@ -112,10 +109,7 @@ await fetch('/api/auth/zoreal', {
 ```ts
 import { startLogin } from '@zoreal/oauth2-js';
 
-const handle = startLogin({
-  clientId: 'ast_your_asset_id',
-  onState: (s) => renderPairing(s),
-});
+const handle = startLogin({ clientId: 'ast_your_asset_id' });
 
 const { credential } = await handle.promise;
 // `credential` is an ID token carrying a stable per-user identifier (`sub`)
@@ -124,10 +118,71 @@ const { credential } = await handle.promise;
 // JWKS before trusting it.
 ```
 
-On desktop, `onState` gives you a QR to render; the user scans it with their
-phone and approves in the ZOREAL ID app. On a phone, `startLogin` opens the
-app directly through the pairing link and the promise settles when the user
-returns. Either way your page just awaits `handle.promise`.
+On desktop this package opens the [pairing modal](#the-pairing-modal); the user
+scans the QR with their phone and approves in the ZOREAL ID app. On a phone it
+skips the QR and opens the app directly through the pairing link. Either way
+your page just awaits `handle.promise`.
+
+## The pairing modal
+
+On desktop a QR sign-in cannot complete unless something puts the pairing code
+on screen, so this package does it. `startLogin` mounts a dialog, keeps it in
+step with the pairing, and takes it down when the flow settles. You render
+nothing.
+
+| | |
+| --- | --- |
+| **Mobile** | No QR. The pairing link opens the ZOREAL ID app and the modal never appears. Force one or the other with `display: 'qr'` / `'link'`. |
+| **Live status** | Copy and title follow the pairing: waiting for a scan, then waiting for approval once the code is claimed (the spent QR blurs out behind a phone glyph). |
+| **Countdown** | Counts down to expiry, turning amber under 20s. Reads the clock each tick rather than decrementing, so a backgrounded tab comes back honest. |
+| **Timeout** | Closes and cancels at zero. Defaults to 120s; override with `pairingTimeoutMs`. The provider's own expiry wins when it is shorter. |
+| **Cancel** | The X, the Cancel button, `Escape`, clicking outside and the timeout are one behaviour: abort the poll, close, reject the promise with `AbortError`. |
+| **No ZOREAL ID yet** | A footer says the same code also installs the app. Without it the panel reads as "scan this with something I do not have", and the flow dead-ends at the one moment it can still be recovered. |
+| **Themes** | `theme: 'auto'` (default) follows `prefers-color-scheme`; `'light'` and `'dark'` force it. The QR well stays white in dark mode on purpose — an inverted QR fails on a good number of phone cameras. |
+| **Language** | Ships its own copy in 39 locales. Pass `locale` and the modal matches the page it opened on; omit it and it follows the browser's preference list, English as the floor. Arabic, Hebrew and Urdu flip the dialog to RTL. |
+| **Accessibility** | `role="dialog"`, `aria-modal`, labelled by its title, focus moved in on open, scroll locked, visible focus rings, and a `prefers-reduced-motion` fallback. |
+
+```ts
+startLogin({
+  clientId: 'ast_your_asset_id',
+  locale: 'sv',        // omit to follow the browser
+  theme: 'auto',       // 'light' | 'dark'
+  pairingTimeoutMs: 120_000,
+});
+```
+
+Styling is a single `<style>` tag injected once, every selector prefixed `zrl-`
+and scoped to the dialog. There is no CSS file to import and nothing to add to
+your build, because a required import step is a required support ticket. The
+DOM is built with `createElement`, never `innerHTML`: this renders on someone
+else's sign-in page.
+
+### Languages
+
+Arabic · Bengali · Bosnian · Bulgarian · Chinese (Simplified) · Chinese (Traditional) ·
+Croatian · Czech · Danish · Dutch · English · Filipino/Tagalog · Finnish · French ·
+German · Greek · Hebrew · Hindi · Hungarian · Indonesian · Italian · Japanese · Korean ·
+Malay · Norwegian · Polish · Portuguese · Portuguese (Brazil) · Romanian · Russian ·
+Serbian · Spanish · Spanish (Latin America) · Swedish · Thai · Turkish · Ukrainian ·
+Urdu · Vietnamese
+
+Resolution handles the cases that usually get missed: `zh` splits by script rather
+than region, `es-MX` and the other Latin American regions resolve to Latin American
+Spanish instead of peninsular, `pt-BR` stays out of European Portuguese, and the
+superseded codes (`iw`, `in`) plus `nb`/`nn` and `fil` reach the right table.
+
+### Rendering it yourself
+
+Framework wrappers and anyone with their own design system opt out:
+
+```ts
+startLogin({ clientId: 'ast_your_asset_id', pairingUI: 'none' });
+```
+
+`onState` then carries everything you need on every state: `qrUrl`, `pairUrl`,
+`status`, `expiresIn` and `cancel`. Render `qrUrl` in an `<img>`; do not draw
+your own. `mountPairingModal` is also exported if you want the real dialog but
+driven on your own terms.
 
 ## The handle
 
@@ -478,8 +533,14 @@ identical in the browser.
 
 A wrapper owns exactly two things: calling `startLogin` on the user's
 gesture, and rendering what `onState` carries. Everything else - PKCE, state,
-nonce, poll cadence, cancellation - is this package's job. A minimal Vue 3
-composable:
+nonce, poll cadence, cancellation - is this package's job.
+
+Decide first whether you are rendering the pairing UI at all. If the built-in
+modal is what you want, drop `onState` and there is nothing to build. If you
+are drawing your own, pass `pairingUI: 'none'` or your users get two QRs on
+screen. The example below draws its own, so it opts out.
+
+A minimal Vue 3 composable:
 
 ```ts
 // useZorealLogin.ts
@@ -500,6 +561,8 @@ export function useZorealLogin(clientId: string) {
     active?.cancel();
     const handle = startLogin({
       clientId,
+      pairingUI: 'none', // this wrapper renders its own
+
       onState: (s) => (pairing.value = s),
     });
     active = handle;

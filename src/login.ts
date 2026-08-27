@@ -20,6 +20,7 @@ import {
   pollUntilApproved,
   startPairing,
 } from './pairing';
+import { mountPairingModal, type PairingModalHandle } from './modal';
 import { challengeS256, generateState, generateVerifier } from './pkce';
 import { DEFAULT_ISSUER } from './wire';
 import type {
@@ -63,6 +64,14 @@ export function startLogin(
   } = {};
 
   const cancel = () => controller.abort();
+
+  // Mounted lazily once the provider has created a pairing, and torn down on
+  // every exit from `run` below: resolution, refusal, and cancel alike.
+  let modal: PairingModalHandle | null = null;
+  const closeModal = () => {
+    modal?.close();
+    modal = null;
+  };
 
   const run = async (): Promise<ZorealCredentialResponse | ZorealCodeResponse> => {
     const verifier = generateVerifier();
@@ -117,9 +126,22 @@ export function startLogin(
           cancel,
         };
 
+        const initial = { status: 'pending' as const, expiresIn: started.expires_in, ...stateSurface };
+
         // The initial state, immediately: the first poll response is one
         // round-trip away, and a UI that waits for it opens visibly empty.
-        options.onState?.({ status: 'pending', expiresIn: started.expires_in, ...stateSurface });
+        options.onState?.(initial);
+
+        // No modal for an app-link hand-off: there is no code to scan, the
+        // phone is already being sent to the app.
+        if ((options.pairingUI ?? 'modal') === 'modal' && !useAppLink) {
+          modal = mountPairingModal(initial, {
+            onCancel: cancel,
+            locale: options.locale,
+            theme: options.theme,
+            timeoutMs: options.pairingTimeoutMs,
+          });
+        }
 
         if (useAppLink && typeof window !== 'undefined') {
           // The universal link, in the same tab: the app claims it, and with
@@ -132,10 +154,16 @@ export function startLogin(
         code = await pollUntilApproved(
           issuer,
           started.request_id,
-          (s) => options.onState?.({ ...s, ...stateSurface }),
+          (s) => {
+            const next = { ...s, ...stateSurface };
+            modal?.update(next);
+            options.onState?.(next);
+          },
           controller.signal
         );
       }
+
+      closeModal();
 
       if (flow === 'auth-code') {
         const response: ZorealCodeResponse = {
@@ -162,6 +190,7 @@ export function startLogin(
       };
       return response;
     } catch (e) {
+      closeModal();
       // The taxonomy the promise rejects with, and nothing else:
       //   OAuthFlowError      the provider refused; reason verbatim
       //   FlowAbandonedError  a human outcome, or a failure that never

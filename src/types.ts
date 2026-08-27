@@ -98,6 +98,25 @@ export interface ZorealCodeResponse {
   nonce: string;
 }
 
+/**
+ * Colour scheme for the built-in pairing modal. 'auto' follows the viewer's OS
+ * setting; the explicit values are for hosts that theme independently of it.
+ */
+export type ZorealTheme = 'auto' | 'light' | 'dark';
+
+/**
+ * Who draws the QR while a pairing is open.
+ *
+ * 'modal' (the default) means this package does, in its own dialog: the flow
+ * cannot complete unless something renders the pair URL, and leaving that to
+ * every caller is how a QR sign-in ships with no QR on screen.
+ *
+ * 'none' opts out entirely and hands the job back to you via `onState`, which
+ * carries `qrUrl`, `pairUrl` and `cancel`. Framework wrappers rendering their
+ * own pairing UI want this.
+ */
+export type PairingUI = 'modal' | 'none';
+
 export interface StartLoginOptions {
   /** The asset token from the ZOREAL dashboard, ast_... */
   clientId: string;
@@ -123,6 +142,18 @@ export interface StartLoginOptions {
   locale?: string;
   /** Called on each pairing state change. Drive your UI from this. */
   onState?: (state: PairingState) => void;
+  /**
+   * Who renders the QR. Defaults to 'modal': this package draws it. Set 'none'
+   * if you are rendering your own pairing UI from `onState`.
+   */
+  pairingUI?: PairingUI;
+  /** Colour scheme for the built-in modal. Defaults to following the OS. */
+  theme?: ZorealTheme;
+  /**
+   * How long the modal stays open before giving up and cancelling, in ms.
+   * Defaults to 120000. The provider's own expiry wins when it is shorter.
+   */
+  pairingTimeoutMs?: number;
 }
 
 export interface BrowserDirectLoginOptions extends StartLoginOptions {
