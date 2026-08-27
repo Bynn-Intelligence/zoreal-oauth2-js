@@ -70,20 +70,25 @@ export function startLogin(
     const nonce = generateState();
 
     try {
-      const started = await startPairing(issuer, {
-        client_id: options.clientId,
-        scope: options.scope ?? 'openid',
-        state,
-        nonce,
-        code_challenge: await challengeS256(verifier),
-        redirect_uri: flow === 'auth-code' ? (options as AuthCodeLoginOptions).redirect_uri : undefined,
-        acr_values: Array.isArray(options.acr_values)
-          ? options.acr_values.join(' ')
-          : options.acr_values,
-        max_age: options.max_age,
-        prompt: options.prompt,
-        locale: options.locale,
-      });
+      const started = await startPairing(
+        issuer,
+        {
+          client_id: options.clientId,
+          scope: options.scope ?? 'openid',
+          state,
+          nonce,
+          code_challenge: await challengeS256(verifier),
+          redirect_uri:
+            flow === 'auth-code' ? (options as AuthCodeLoginOptions).redirect_uri : undefined,
+          acr_values: Array.isArray(options.acr_values)
+            ? options.acr_values.join(' ')
+            : options.acr_values,
+          max_age: options.max_age,
+          prompt: options.prompt,
+          locale: options.locale,
+        },
+        controller.signal
+      );
 
       let code: string;
       let selectBy: SelectBy = 'device';

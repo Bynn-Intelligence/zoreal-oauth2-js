@@ -58,7 +58,8 @@ async function parseJson(response: Response): Promise<Record<string, unknown>> {
 
 export async function startPairing(
   issuer: string,
-  params: StartPairingParams
+  params: StartPairingParams,
+  signal?: AbortSignal
 ): Promise<PairStartResponse> {
   const response = await fetch(`${issuer}/pair`, {
     method: 'POST',
@@ -69,6 +70,7 @@ export async function startPairing(
       wire_version: WIRE_VERSION,
       sdk: `${SDK_NAME}/${SDK_VERSION}`,
     }),
+    signal,
   });
 
   const body = await parseJson(response);

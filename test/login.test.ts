@@ -175,7 +175,11 @@ describe('startLogin, browser-direct', () => {
     const { fetchMock } = stubProvider({ statuses: [{ status: 'pending', expires_in: 118 }] });
 
     const handle = startLogin({ clientId: 'ast_x', issuer: 'https://id.zoreal.test' });
-    await flush();
+    // Wait until the flow has actually reached the poll (the pair call and the
+    // first status call) rather than assume a tick budget covers the PKCE
+    // digest: cancelling before the flow hits the network makes the
+    // call-count assertion below meaningless.
+    await until(() => fetchMock.mock.calls.length >= 2);
     const polled = fetchMock.mock.calls.length;
 
     handle.cancel();
