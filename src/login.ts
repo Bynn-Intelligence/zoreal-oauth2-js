@@ -116,9 +116,9 @@ export function startLogin(
         surface.qrUrl = `${issuer}/pair/${encodeURIComponent(started.request_id)}/qr.svg`;
         surface.appLink = useAppLink;
 
-        // Everything a caller-rendered pairing UI needs, on every state it
-        // sees: the QR flow cannot complete unless SOMETHING renders pairUrl,
-        // and in this package that something is always the caller.
+        // Everything a pairing UI needs, on every state it sees. The modal
+        // below renders from it, and so does a caller who has opted out with
+        // pairingUI: 'none'.
         const stateSurface = {
           pairUrl: surface.pairUrl,
           qrUrl: surface.qrUrl,

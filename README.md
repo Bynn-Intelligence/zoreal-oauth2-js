@@ -309,7 +309,6 @@ key, `user` a presence/unlock gesture, `face` a face biometric. `zoreal.live` is
 const handle = startLogin({
   clientId: 'ast_your_asset_id',
   acr_values: 'zoreal.live',        // the app now makes the holder pass a face capture
-  onState: (s) => renderPairing(s),
 });
 ```
 
@@ -366,6 +365,8 @@ enforced where enforcement counts: on your backend, against the verified token.
 | `generateVerifier()` / `challengeS256(v)` / `generateState()` | PKCE and state material, S256 only |
 | `unsafeClaims(idToken)` | reads claims without verifying. Convenience only; verification happens server-side |
 | `isMobileUserAgent()` | whether this user agent gets the app link rather than a QR |
+| `mountPairingModal(state, { onCancel, locale?, theme?, timeoutMs? })` | mounts the dialog yourself, for `pairingUI: 'none'` callers who still want the real one. Returns `{ update, close }`, or `null` outside a browser |
+| `DEFAULT_PAIRING_TIMEOUT_MS` | `120000`, the modal's default cap |
 
 Errors: `OAuthFlowError` (the provider refused; `error` is the OAuth code,
 `description` is the provider's reason verbatim) and `FlowAbandonedError` (a
@@ -373,10 +374,17 @@ human outcome: `reason.type` is `request_denied`, `request_expired`,
 `enrolment_abandoned`, or `unknown` for failures that never reached the
 provider). `cancel()` rejects with a `DOMException` named `AbortError`.
 
+`startLogin` options controlling the built-in modal: `pairingUI`
+(`'modal'` default, `'none'` to render your own), `theme` (`'auto'` default,
+`'light'`, `'dark'`), `pairingTimeoutMs` (120000 default), and `locale`, which
+is sent to the provider AND picks the modal's own language. See
+[The pairing modal](#the-pairing-modal).
+
 All types are exported: `PairingState`, `ZorealCredentialResponse`,
 `ZorealCodeResponse`, `StartLoginOptions`, `BrowserDirectLoginOptions`,
 `AuthCodeLoginOptions`, `LoginHandle`, `ErrorCode`, `NonOAuthError`,
-`SelectBy`, `AcrValue`, and the wire shapes.
+`SelectBy`, `AcrValue`, `PairingUI`, `ZorealTheme`, `PairingModalHandle`,
+`PairingModalOptions`, and the wire shapes.
 
 ## Error reference
 
@@ -482,6 +490,9 @@ export function mountZorealButton(root: HTMLElement) {
       flow: 'auth-code',
       clientId: 'ast_your_asset_id',
       scope: 'openid email profile.name',
+      // This example draws its own panel, so it opts out of the built-in
+      // modal. Drop these two lines and delete renderPairing to use it.
+      pairingUI: 'none',
       onState: renderPairing,
     });
 

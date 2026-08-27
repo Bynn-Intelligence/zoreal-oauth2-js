@@ -56,7 +56,9 @@ export interface PairingState {
   /**
    * The pairing link and its provider-served QR image. Present on every
    * callback of a QR/link flow: the QR flow cannot complete unless SOMETHING
-   * renders pairUrl, and in this package that something is always the caller.
+   * renders pairUrl. By default that something is this package's own modal;
+   * these fields are what you render from instead when you opt out with
+   * `pairingUI: 'none'`.
    */
   pairUrl?: string;
   /** The provider-served SVG of pairUrl. Put it in an <img>; do not draw your own. */
