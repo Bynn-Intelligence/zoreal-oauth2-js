@@ -291,8 +291,7 @@ origin:
 
 ## Development against a local provider
 
-Pass `issuer` to `startLogin` (for the Bynn stack:
-`https://rails.bynn.io/id`). The issuer value must match the `iss` inside the
+Pass `issuer` to `startLogin` . The issuer value must match the `iss` inside the
 tokens exactly - it is compared, not normalized. Sandbox clients accept any
 localhost origin.
 
