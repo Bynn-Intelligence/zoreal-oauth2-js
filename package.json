@@ -1,6 +1,6 @@
 {
   "name": "@zoreal/oauth2-js",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "Login with ZOREAL for the browser, framework-free. A ZOREAL Verified Proof-of-Human behind every sign-in.",
   "license": "MIT",
   "repository": {
