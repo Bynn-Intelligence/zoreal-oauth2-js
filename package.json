@@ -1,0 +1,45 @@
+{
+  "name": "@zoreal/oauth2-js",
+  "version": "0.1.0",
+  "description": "Login with ZOREAL for the browser, framework-free. A ZOREAL Verified Proof-of-Human behind every sign-in.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Bynn-Intelligence/zoreal-oauth2-js.git"
+  },
+  "homepage": "https://zoreal.com",
+  "keywords": [
+    "zoreal",
+    "oauth2",
+    "oidc",
+    "browser",
+    "login",
+    "identity",
+    "liveness"
+  ],
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "tsup": "^8.3.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}
