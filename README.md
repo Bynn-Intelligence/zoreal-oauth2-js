@@ -611,6 +611,17 @@ treats as attacker-controlled, so nothing it resolves is trusted until your
 backend has verified the ID token's signature, `iss`, `aud`, `exp` and `nonce`
 against the JWKS. `unsafeClaims` is named for exactly that reason.
 
+## Verifying this release
+
+Every version is published from GitHub Actions with [npm provenance](https://docs.npmjs.com/generating-provenance-statements): the package page on npmjs.com carries a **Provenance** panel linking the exact commit and workflow run that built the tarball, signed through [Sigstore](https://www.sigstore.dev/) and recorded in its public transparency log. No long-lived npm token stands behind it — the workflow authenticates by OIDC ([trusted publishing](https://docs.npmjs.com/trusted-publishers)), so a leaked CI secret cannot cut a release.
+
+Check the signatures on what you actually installed:
+
+```sh
+npm install @zoreal/oauth2-js
+npm audit signatures
+```
+
 ## The ZOREAL OAuth2 library family
 
 | Repository | Package | Role |
