@@ -1,5 +1,7 @@
 # @zoreal/oauth2-js
 
+[![npm](https://img.shields.io/npm/v/@zoreal/oauth2-js)](https://www.npmjs.com/package/@zoreal/oauth2-js) [![npm downloads](https://img.shields.io/npm/dm/@zoreal/oauth2-js)](https://www.npmjs.com/package/@zoreal/oauth2-js) [![types](https://img.shields.io/npm/types/@zoreal/oauth2-js)](https://www.npmjs.com/package/@zoreal/oauth2-js) [![CI](https://img.shields.io/github/actions/workflow/status/Bynn-Intelligence/zoreal-oauth2-js/ci.yml?branch=main&label=CI)](https://github.com/Bynn-Intelligence/zoreal-oauth2-js/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+
 Login with ZOREAL for the browser, framework-free: a ZOREAL Verified
 Proof-of-Human behind every sign-in.
 
