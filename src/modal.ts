@@ -168,16 +168,17 @@ export function mountPairingModal(
   title.id = titleId;
   const bodyText = el('p', cx('body-text'));
 
-  // The ring around the well lives under it, so the well is wrapped; the
-  // stylesheet says why it cannot be a pseudo-element of the well itself. The
-  // wrapper carries the spent flag for the ring, because a stylesheet cannot
-  // look up from the image to a ring beside it.
-  const halo = el('div', cx('qr-halo'));
-  const glow = el('span', cx('qr-glow'));
-  glow.setAttribute('aria-hidden', 'true');
-  glow.appendChild(el('span', cx('qr-arc')));
-
+  // The light on the well's edge is a set of masked overlays inside the well,
+  // drawn first so the spent badge, a later sibling, stays above them. The
+  // well carries the spent flag for them: a stylesheet cannot look back from
+  // the image to a sibling before it.
   const well = el('div', cx('qr-well'));
+  const glow = el('span', cx('qr-beam-glow'));
+  glow.setAttribute('aria-hidden', 'true');
+  glow.appendChild(el('span', cx('qr-beam-glow-band')));
+  const beam = el('span', cx('qr-beam'));
+  beam.setAttribute('aria-hidden', 'true');
+  well.append(glow, beam);
   const qr = el('img', cx('qr'));
   qr.alt = t.qrAlt;
   qr.width = 180;
@@ -189,7 +190,6 @@ export function mountPairingModal(
   badge.appendChild(strokeIcon(24, ['M8.5 2h7a2.5 2.5 0 0 1 2.5 2.5v15a2.5 2.5 0 0 1-2.5 2.5h-7A2.5 2.5 0 0 1 6 19.5v-15A2.5 2.5 0 0 1 8.5 2Z', 'M11 18.5h2'], '1.8'));
   overlay.appendChild(badge);
   well.append(qr, overlay);
-  halo.append(glow, well);
 
   const status = el('div', cx('status'));
   const dot = el('span', cx('dot'));
@@ -199,7 +199,7 @@ export function mountPairingModal(
 
   const timer = el('p', cx('timer'));
 
-  body.append(mark, title, bodyText, halo, status, timer);
+  body.append(mark, title, bodyText, well, status, timer);
 
   // The QR is on screen because this person is being asked to use a phone app,
   // and some of them do not have it yet. Without this the panel reads as "scan
@@ -269,7 +269,7 @@ export function mountPairingModal(
       s.status === 'enrolling' ? t.bodyEnrolling : settled ? t.bodyApprove : t.bodyScan;
     statusLabel.textContent = settled ? t.waitingApproval : t.waiting;
     qr.dataset.spent = String(settled);
-    halo.dataset.spent = String(settled);
+    well.dataset.spent = String(settled);
     overlay.style.display = settled ? '' : 'none';
     if (s.qrUrl) showFrame(s.qrUrl);
   };

@@ -127,109 +127,121 @@ export const CSS = `
   color: var(--zrl-ink-soft);
 }
 
-/* The light around the well: a thin ring in the accent, one bright arc
-   travelling round it, and a soft glow of the same colour bleeding a few
-   pixels outward. It says the pairing is live without a word.
-
-   It sits BELOW the well, which is why the well is wrapped instead of given a
-   pseudo-element. Anything drawn inside the well paints over the white quiet
-   zone the camera needs, and a negative z-index from inside the well lands
-   wherever the card's stacking context happens to be that frame (the card's
-   entrance animation makes and unmakes one). The wrapper is the well's old
-   box exactly, same size, same margin, so nothing moves; the well keeps its
-   own stacking order on top, and the ring cannot touch the QR. */
-.${PREFIX}-qr-halo {
-  position: relative;
-  isolation: isolate;
-  width: 204px;
-  height: 204px;
-  margin: 20px auto 0;
-}
-
 .${PREFIX}-qr-well {
   position: relative;
-  z-index: 1;
   display: grid;
   place-items: center;
   box-sizing: border-box;
   width: 204px;
   height: 204px;
-  margin: 0;
+  margin: 20px auto 0;
   padding: 12px;
   border: 1px solid var(--zrl-line);
-  border-radius: 16px;
+  border-radius: var(--zrl-radius);
   background: var(--zrl-qr-bg);
+  /* The light on the edge takes its shape and colour from here. The colour
+     is fixed, not themed: the brand blue on both grounds, a lighter tint of
+     it at the head, no other hue. */
+  --zrl-radius: 16px;
+  --zrl-beam: #00b4d9;
+  --zrl-beam-head: #7fe0f4;
+  --zrl-beam-size: 100px;
+  --zrl-beam-time: 4s;
+  --zrl-glow-reach: 20px;
+  --zrl-glow-core: 3px;
 }
 
-/* The glow is the ring's own alpha, blurred and drawn beneath it, so it
-   follows the arc round and fades with it. It has to be a parent of the
-   masked band: a filter is applied before a mask, so a shadow cast from the
-   band itself would be cut off at the band's edge. Two shadows because one
-   2px source blurred over 10px is too faint to read as light; the second
-   blurs the first. */
-.${PREFIX}-qr-glow {
+/* The light on the well's edge: a short comet running along the border, with
+   a soft glow outside it. Three overlays inside the well, each masked so the
+   comet can only ever paint where its mask allows, and the white interior lies
+   outside every mask: nothing here can reach the quiet zone a camera needs,
+   whatever the comet is doing. The mask is the padding box cut out of the
+   border box, a transparent layer clipped to the padding box intersected
+   with a solid one clipped to the border box. The prefixed form is for Chrome
+   before 120 and Safari before 15.4; the unprefixed one, declared after it,
+   wins everywhere else.
+
+   qr-beam keeps a 1px ring on the border line: the comet itself.
+   qr-beam-glow is the glow: a wide band outside the well that blurs whatever
+   is inside it, and inside it qr-beam-glow-band keeps a 3px ring with a
+   second copy of the comet. The blur has to sit on the parent because a
+   filter is applied before a mask: blurred on the band itself, the glow
+   would be cut back to the band's own edge. On the parent it runs after the
+   band has clipped the comet thin and before the parent's mask cuts away the
+   inward half, which is what makes it fade outward and never over the QR.
+   All three share one containing block, the well's padding box, so the two
+   comets ride the same path; the spent badge is a later sibling and paints
+   above them. */
+.${PREFIX}-qr-beam,
+.${PREFIX}-qr-beam-glow,
+.${PREFIX}-qr-beam-glow-band {
   position: absolute;
-  inset: -2px;
+  inset: -1px;
+  border: 1px solid transparent;
+  border-radius: var(--zrl-radius);
   pointer-events: none;
-  filter: drop-shadow(0 0 3px var(--zrl-accent)) drop-shadow(0 0 10px var(--zrl-accent));
+  -webkit-mask: linear-gradient(transparent, transparent), linear-gradient(#fff, #fff);
+  -webkit-mask-clip: padding-box, border-box;
+  -webkit-mask-composite: source-in;
+  mask: linear-gradient(transparent, transparent), linear-gradient(#fff, #fff);
+  mask-clip: padding-box, border-box;
+  mask-composite: intersect;
+}
+.${PREFIX}-qr-beam-glow {
+  inset: calc(0px - var(--zrl-glow-reach));
+  border-width: var(--zrl-glow-reach);
+  border-radius: calc(var(--zrl-radius) - 1px + var(--zrl-glow-reach));
+  filter: blur(6px);
+  opacity: 0.7;
+}
+.${PREFIX}-qr-beam-glow-band {
+  inset: calc(0px - var(--zrl-glow-core));
+  border-width: var(--zrl-glow-core);
+  border-radius: calc(var(--zrl-radius) - 1px + var(--zrl-glow-core));
 }
 
-/* The band: a 2px ring just outside the well, cut with a mask that keeps the
-   padding and drops the content box. The gradient is on a pseudo-element
-   rather than on the band, because in the fallback it has to rotate as a
-   whole while the band stays put. The prefixed mask is for Chrome before 120;
-   the unprefixed one, declared after it, wins everywhere else. */
-.${PREFIX}-qr-arc {
-  position: absolute;
-  inset: 0;
-  padding: 2px;
-  border-radius: 18px;
-  overflow: hidden;
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  mask-composite: exclude;
-}
-.${PREFIX}-qr-arc::before,
-.${PREFIX}-qr-arc::after {
+/* At rest the edge holds a dim, even blue: a 1px line on the border and, from
+   the glow band, a soft halo outside it. Hidden while the comet runs, so the
+   border reads as the well's own line with a light passing over it; shown
+   once the light has stopped. Every path below ends here, which is what
+   makes them look the same at rest. */
+.${PREFIX}-qr-beam::before,
+.${PREFIX}-qr-beam-glow-band::before {
   content: '';
   position: absolute;
+  inset: -50%;
+  background: var(--zrl-beam);
+  opacity: 0;
   transition: opacity 400ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 
-/* The light. Mostly transparent, a tail that builds over a quarter turn, a
-   short full-strength head and a drop-off within a few degrees, so it reads
-   as travelling rather than blinking. One revolution every 3s, linear:
-   continuous motion has no ease. Oversized so its corners still cover the
-   band mid-rotation in the transform fallback; the property path shrinks it
-   back to the band. */
-.${PREFIX}-qr-arc::before {
+/* The moving light. Declared bottom-up: the transform fallback here, and each
+   @supports block further down replaces it where the browser allows. */
+.${PREFIX}-qr-beam::after,
+.${PREFIX}-qr-beam-glow-band::after {
+  content: '';
+  position: absolute;
   inset: -50%;
   background: conic-gradient(
     from var(--zrl-angle, 0deg),
     transparent 0deg 245deg,
-    var(--zrl-accent) 332deg 346deg,
+    var(--zrl-beam) 332deg 346deg,
     transparent 356deg 360deg
   );
   animation: ${PREFIX}-orbit 3s linear infinite;
+  transition: opacity 400ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 
-/* The rest state: the same ring, evenly lit. Faint under the moving light so
-   the ring reads as a ring; stronger once the light has stopped. */
-.${PREFIX}-qr-arc::after {
-  inset: 0;
-  background: var(--zrl-accent);
-  opacity: 0.16;
-}
-
-/* Spent: the light stops where it is and fades, and the ring settles to a
-   dim, even glow. Paused rather than removed, so it does not jump back to
-   its start on the way out. */
-.${PREFIX}-qr-halo[data-spent="true"] .${PREFIX}-qr-arc::before {
+/* Spent: the light stops where it is and fades, and the edge settles to the
+   dim glow. Paused rather than removed, so it does not jump back to its start
+   on the way out. */
+.${PREFIX}-qr-well[data-spent="true"] .${PREFIX}-qr-beam::after,
+.${PREFIX}-qr-well[data-spent="true"] .${PREFIX}-qr-beam-glow-band::after {
   animation-play-state: paused;
   opacity: 0;
 }
-.${PREFIX}-qr-halo[data-spent="true"] .${PREFIX}-qr-arc::after { opacity: 0.34; }
+.${PREFIX}-qr-well[data-spent="true"] .${PREFIX}-qr-beam::before { opacity: 0.55; }
+.${PREFIX}-qr-well[data-spent="true"] .${PREFIX}-qr-beam-glow-band::before { opacity: 0.7; }
 
 .${PREFIX}-qr {
   display: block;
@@ -373,17 +385,16 @@ export const CSS = `
   70%, 100% { transform: scale(2.6); opacity: 0 }
 }
 
-/* Two ways to turn the light, one look.
-   Where the browser can register a typed custom property, the gradient's own
-   angle animates and the element never moves. Where it cannot (Firefox before
-   128), an untyped custom property cannot interpolate and the light would
-   snap once a cycle, so the oversized pseudo-element rotates instead and the
-   band's mask keeps the ring in place. At rest the two are the same pixels:
-   same gradient, same centre, angle zero.
+/* Three ways to move the light, one look at rest.
+   Where offset-path takes a rect() (Chrome 116, Firefox 122, Safari 18) the
+   comet rides the edge. Before that, a conic gradient turns inside the same
+   masks instead: on a registered custom property where @property exists, and
+   by rotating an oversized square where it does not, since an untyped custom
+   property cannot interpolate and the light would snap once a cycle.
    There is no direct query for @property support. transition-behavior
    shipped after it in every engine (Chrome 117 vs 85, Firefox 129 vs 128,
    Safari 17.4 vs 16.4), so it stands in: a yes is never wrong, and a no only
-   sends a capable browser down the fallback, which looks the same.
+   sends a capable browser down the transform tier, which looks the same.
    inherits: false so the angle stays on the element that animates it and
    never reaches the host page or the well. */
 @property --zrl-angle {
@@ -393,10 +404,32 @@ export const CSS = `
 }
 @keyframes ${PREFIX}-orbit { to { transform: rotate(360deg) } }
 @keyframes ${PREFIX}-orbit-angle { to { --zrl-angle: 360deg } }
+@keyframes ${PREFIX}-beam { to { offset-distance: 100% } }
 @supports (transition-behavior: allow-discrete) {
-  .${PREFIX}-qr-arc::before {
-    inset: 0;
+  .${PREFIX}-qr-beam::after {
+    inset: -1px;
     animation-name: ${PREFIX}-orbit-angle;
+  }
+  .${PREFIX}-qr-beam-glow-band::after {
+    inset: calc(0px - var(--zrl-glow-core));
+    animation-name: ${PREFIX}-orbit-angle;
+  }
+}
+/* The comet: a square that rides the well's edge on a rounded-rect path, its
+   anchor a little ahead of centre, turned to face the way it travels, and
+   masked down to what its overlay allows. The gradient runs against the
+   direction of travel: a light head, the blue body, nothing behind. One lap
+   in 4s, linear: continuous motion has no ease. */
+@supports (offset-path: rect(0 auto auto 0)) {
+  .${PREFIX}-qr-beam::after,
+  .${PREFIX}-qr-beam-glow-band::after {
+    inset: auto;
+    width: var(--zrl-beam-size);
+    height: var(--zrl-beam-size);
+    background: linear-gradient(to left, var(--zrl-beam-head), var(--zrl-beam), transparent);
+    offset-path: rect(0 auto auto 0 round calc(var(--zrl-radius) - 1px));
+    offset-anchor: 60% 50%;
+    animation: ${PREFIX}-beam var(--zrl-beam-time) linear infinite;
   }
 }
 
@@ -409,10 +442,11 @@ export const CSS = `
   .${PREFIX}-cancel,
   .${PREFIX}-close,
   .${PREFIX}-timer { transition: none }
-  /* No travelling light. The ring keeps a still, soft glow instead, a step
-     brighter than the spent state so pending and spent still read apart. */
-  .${PREFIX}-qr-arc::before { animation: none; opacity: 0 }
-  .${PREFIX}-qr-arc::after { opacity: 0.5 }
+  /* No travelling light; the edge keeps its dim static glow instead. */
+  .${PREFIX}-qr-beam::after,
+  .${PREFIX}-qr-beam-glow-band::after { animation: none; opacity: 0 }
+  .${PREFIX}-qr-beam::before { opacity: 0.55 }
+  .${PREFIX}-qr-beam-glow-band::before { opacity: 0.7 }
 }
 `;
 
