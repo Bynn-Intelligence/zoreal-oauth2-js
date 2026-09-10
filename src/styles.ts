@@ -127,19 +127,109 @@ export const CSS = `
   color: var(--zrl-ink-soft);
 }
 
+/* The light around the well: a thin ring in the accent, one bright arc
+   travelling round it, and a soft glow of the same colour bleeding a few
+   pixels outward. It says the pairing is live without a word.
+
+   It sits BELOW the well, which is why the well is wrapped instead of given a
+   pseudo-element. Anything drawn inside the well paints over the white quiet
+   zone the camera needs, and a negative z-index from inside the well lands
+   wherever the card's stacking context happens to be that frame (the card's
+   entrance animation makes and unmakes one). The wrapper is the well's old
+   box exactly, same size, same margin, so nothing moves; the well keeps its
+   own stacking order on top, and the ring cannot touch the QR. */
+.${PREFIX}-qr-halo {
+  position: relative;
+  isolation: isolate;
+  width: 204px;
+  height: 204px;
+  margin: 20px auto 0;
+}
+
 .${PREFIX}-qr-well {
   position: relative;
+  z-index: 1;
   display: grid;
   place-items: center;
   box-sizing: border-box;
   width: 204px;
   height: 204px;
-  margin: 20px auto 0;
+  margin: 0;
   padding: 12px;
   border: 1px solid var(--zrl-line);
   border-radius: 16px;
   background: var(--zrl-qr-bg);
 }
+
+/* The glow is the ring's own alpha, blurred and drawn beneath it, so it
+   follows the arc round and fades with it. It has to be a parent of the
+   masked band: a filter is applied before a mask, so a shadow cast from the
+   band itself would be cut off at the band's edge. Two shadows because one
+   2px source blurred over 10px is too faint to read as light; the second
+   blurs the first. */
+.${PREFIX}-qr-glow {
+  position: absolute;
+  inset: -2px;
+  pointer-events: none;
+  filter: drop-shadow(0 0 3px var(--zrl-accent)) drop-shadow(0 0 10px var(--zrl-accent));
+}
+
+/* The band: a 2px ring just outside the well, cut with a mask that keeps the
+   padding and drops the content box. The gradient is on a pseudo-element
+   rather than on the band, because in the fallback it has to rotate as a
+   whole while the band stays put. The prefixed mask is for Chrome before 120;
+   the unprefixed one, declared after it, wins everywhere else. */
+.${PREFIX}-qr-arc {
+  position: absolute;
+  inset: 0;
+  padding: 2px;
+  border-radius: 18px;
+  overflow: hidden;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+}
+.${PREFIX}-qr-arc::before,
+.${PREFIX}-qr-arc::after {
+  content: '';
+  position: absolute;
+  transition: opacity 400ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+/* The light. Mostly transparent, a tail that builds over a quarter turn, a
+   short full-strength head and a drop-off within a few degrees, so it reads
+   as travelling rather than blinking. One revolution every 3s, linear:
+   continuous motion has no ease. Oversized so its corners still cover the
+   band mid-rotation in the transform fallback; the property path shrinks it
+   back to the band. */
+.${PREFIX}-qr-arc::before {
+  inset: -50%;
+  background: conic-gradient(
+    from var(--zrl-angle, 0deg),
+    transparent 0deg 245deg,
+    var(--zrl-accent) 332deg 346deg,
+    transparent 356deg 360deg
+  );
+  animation: ${PREFIX}-orbit 3s linear infinite;
+}
+
+/* The rest state: the same ring, evenly lit. Faint under the moving light so
+   the ring reads as a ring; stronger once the light has stopped. */
+.${PREFIX}-qr-arc::after {
+  inset: 0;
+  background: var(--zrl-accent);
+  opacity: 0.16;
+}
+
+/* Spent: the light stops where it is and fades, and the ring settles to a
+   dim, even glow. Paused rather than removed, so it does not jump back to
+   its start on the way out. */
+.${PREFIX}-qr-halo[data-spent="true"] .${PREFIX}-qr-arc::before {
+  animation-play-state: paused;
+  opacity: 0;
+}
+.${PREFIX}-qr-halo[data-spent="true"] .${PREFIX}-qr-arc::after { opacity: 0.34; }
 
 .${PREFIX}-qr {
   display: block;
@@ -283,6 +373,33 @@ export const CSS = `
   70%, 100% { transform: scale(2.6); opacity: 0 }
 }
 
+/* Two ways to turn the light, one look.
+   Where the browser can register a typed custom property, the gradient's own
+   angle animates and the element never moves. Where it cannot (Firefox before
+   128), an untyped custom property cannot interpolate and the light would
+   snap once a cycle, so the oversized pseudo-element rotates instead and the
+   band's mask keeps the ring in place. At rest the two are the same pixels:
+   same gradient, same centre, angle zero.
+   There is no direct query for @property support. transition-behavior
+   shipped after it in every engine (Chrome 117 vs 85, Firefox 129 vs 128,
+   Safari 17.4 vs 16.4), so it stands in: a yes is never wrong, and a no only
+   sends a capable browser down the fallback, which looks the same.
+   inherits: false so the angle stays on the element that animates it and
+   never reaches the host page or the well. */
+@property --zrl-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+@keyframes ${PREFIX}-orbit { to { transform: rotate(360deg) } }
+@keyframes ${PREFIX}-orbit-angle { to { --zrl-angle: 360deg } }
+@supports (transition-behavior: allow-discrete) {
+  .${PREFIX}-qr-arc::before {
+    inset: 0;
+    animation-name: ${PREFIX}-orbit-angle;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .${PREFIX}-scrim,
   .${PREFIX}-card,
@@ -292,6 +409,10 @@ export const CSS = `
   .${PREFIX}-cancel,
   .${PREFIX}-close,
   .${PREFIX}-timer { transition: none }
+  /* No travelling light. The ring keeps a still, soft glow instead, a step
+     brighter than the spent state so pending and spent still read apart. */
+  .${PREFIX}-qr-arc::before { animation: none; opacity: 0 }
+  .${PREFIX}-qr-arc::after { opacity: 0.5 }
 }
 `;
 
