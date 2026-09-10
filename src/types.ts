@@ -56,13 +56,28 @@ export interface PairingState {
   /**
    * The pairing link and its provider-served QR image. Present on every
    * callback of a QR/link flow: the QR flow cannot complete unless SOMETHING
-   * renders pairUrl. By default that something is this package's own modal;
+   * renders the code. By default that something is this package's own modal;
    * these fields are what you render from instead when you opt out with
    * `pairingUI: 'none'`.
    */
   pairUrl?: string;
-  /** The provider-served SVG of pairUrl. Put it in an <img>; do not draw your own. */
+  /**
+   * The provider-served SVG of the code to scan. Put it in an <img>; do not
+   * draw your own. It CHANGES OVER TIME: while the pairing is pending a fresh
+   * URL arrives every `qrRefreshSeconds`, because the code on screen moves
+   * and the provider refuses a frame older than 30 seconds. That is what
+   * makes a screenshot of it useless to an attacker. Render the qrUrl you
+   * are given on every state; a UI that caches the first one shows a code
+   * that stops working.
+   */
   qrUrl?: string;
+  /**
+   * How often qrUrl changes, in seconds, while the pairing is pending.
+   * Present on a QR flow, absent on an app-link flow and on a provider that
+   * still serves a static code. Informational: the refresh itself is done for
+   * you and arrives through this callback.
+   */
+  qrRefreshSeconds?: number;
   /** True when the flow resolved to the app link (mobile) rather than a QR. */
   appLink?: boolean;
   /** Abandons this pairing: stops the poll. Wire it to your UI's cancel control. */
@@ -188,9 +203,13 @@ export interface LoginHandle<T> {
   cancel: () => void;
   /** The pairing request id, once created. Undefined before, and for prompt=none immediate codes. */
   readonly requestId: string | undefined;
-  /** The pairing URL, once created. The same URL in QR and app link. */
+  /** The pairing URL, once created. On an app-link flow it carries the start token; navigate to it verbatim. */
   readonly pairUrl: string | undefined;
-  /** The provider-served QR image of pairUrl. */
+  /**
+   * The provider-served QR image, current frame. Changes every few seconds
+   * while the pairing is pending; the onState callback is where a UI should
+   * read it from, since that is the only place a new frame announces itself.
+   */
   readonly qrUrl: string | undefined;
   /** True when display resolved to the app link rather than the QR. */
   readonly appLink: boolean | undefined;

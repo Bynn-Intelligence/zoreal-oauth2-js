@@ -16,6 +16,7 @@ export { challengeS256, generateState, generateVerifier } from './pkce';
 export { unsafeClaims } from './jwt';
 export {
   DEFAULT_ISSUER,
+  DEFAULT_QR_REFRESH_SECONDS,
   POLL_INTERVAL_ENROLLING_MS,
   POLL_INTERVAL_MS,
   SDK_NAME,
@@ -24,6 +25,7 @@ export {
 } from './wire';
 export type {
   PairCreated,
+  PairDisplay,
   PairImmediate,
   PairStartResponse,
   PairStatusResponse,

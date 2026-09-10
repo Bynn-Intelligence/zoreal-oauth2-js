@@ -78,6 +78,16 @@ const until = async (predicate: () => boolean) => {
   }
 };
 
+/**
+ * Ends a login that is still running at the end of a test. A flow left polling
+ * outlives the test and its in-flight fetch lands in the NEXT test's spy, which
+ * is how a suite starts failing somewhere other than where it broke.
+ */
+const endFlow = async (handle: { cancel: () => void; promise: Promise<unknown> }) => {
+  handle.cancel();
+  await expect(handle.promise).rejects.toMatchObject({ name: 'AbortError' });
+};
+
 describe('startLogin, browser-direct', () => {
   it('pairs, polls, exchanges, and resolves with the credential', async () => {
     useFakePollTimers();
@@ -112,6 +122,11 @@ describe('startLogin, browser-direct', () => {
       expect(typeof s.cancel).toBe('function');
     }
 
+    // The surface was decided before the pairing was created, because the
+    // provider binds it there and will not serve the other one afterwards.
+    const pairCall = calls.find((c) => c.url.endsWith('/pair'))!;
+    expect(JSON.parse(pairCall.init!.body as string).display).toBe('qr');
+
     // The handle fills in once the pairing exists.
     expect(handle.requestId).toBe('r1');
     expect(handle.pairUrl).toBe('https://zoreal.com/qr/r1');
@@ -125,6 +140,240 @@ describe('startLogin, browser-direct', () => {
     expect(body.get('code')).toBe('code-1');
     expect(body.get('client_id')).toBe('ast_x');
     expect(body.get('client_secret')).toBeNull();
+  });
+
+  it("sends display 'link' when the caller asks for the app link", async () => {
+    const { calls } = stubProvider({
+      pair: json({ request_id: 'r1', pair_url: 'https://zoreal.com/login/r1?t=TOKEN', expires_in: 120, display: 'link' }),
+      statuses: [{ status: 'approved', code: 'code-1' }],
+    });
+
+    const handle = startLogin({
+      clientId: 'ast_x',
+      issuer: 'https://id.zoreal.test',
+      display: 'link',
+    });
+    const result = await handle.promise;
+
+    expect(result.select_by).toBe('app_link');
+    const pairCall = calls.find((c) => c.url.endsWith('/pair'))!;
+    expect(JSON.parse(pairCall.init!.body as string).display).toBe('link');
+    // The link carries its start token; it is navigated to verbatim.
+    expect(handle.pairUrl).toBe('https://zoreal.com/login/r1?t=TOKEN');
+  });
+
+  it('moves the QR on every refresh, so a screenshot goes stale', async () => {
+    useFakePollTimers();
+    stubProvider({
+      pair: json({
+        request_id: 'r1',
+        pair_url: 'https://zoreal.com/login/r1',
+        expires_in: 120,
+        display: 'qr',
+        qr_refresh_seconds: 5,
+      }),
+      statuses: [{ status: 'pending', expires_in: 118 }],
+    });
+
+    const states: PairingState[] = [];
+    const handle = startLogin({
+      clientId: 'ast_x',
+      issuer: 'https://id.zoreal.test',
+      onState: (s) => states.push(s),
+    });
+    await until(() => states.length > 0);
+    await flush();
+
+    // The first frame is the plain URL; the provider decides what is in it.
+    expect(states[0].qrUrl).toBe('https://id.zoreal.test/pair/r1/qr.svg');
+    expect(states[0].qrRefreshSeconds).toBe(5);
+    const before = states.length;
+
+    await vi.advanceTimersByTimeAsync(5000);
+    await flush();
+    const refreshed = states[states.length - 1];
+    expect(states.length).toBeGreaterThan(before);
+    // A new URL every time, cache-buster and all: a cached image is a code
+    // that has already moved on.
+    expect(refreshed.qrUrl).toMatch(/^https:\/\/id\.zoreal\.test\/pair\/r1\/qr\.svg\?t=\d+$/);
+    expect(refreshed.status).toBe('pending');
+
+    const first = refreshed.qrUrl;
+    await vi.advanceTimersByTimeAsync(5000);
+    await flush();
+    expect(states[states.length - 1].qrUrl).not.toBe(first);
+    await endFlow(handle);
+  });
+
+  it('refreshes every 3 seconds when the provider does not say', async () => {
+    useFakePollTimers();
+    stubProvider({
+      pair: json({ request_id: 'r1', pair_url: 'https://zoreal.com/login/r1', expires_in: 120, display: 'qr' }),
+      statuses: [{ status: 'pending', expires_in: 118 }],
+    });
+
+    const states: PairingState[] = [];
+    const handle = startLogin({
+      clientId: 'ast_x',
+      issuer: 'https://id.zoreal.test',
+      onState: (s) => states.push(s),
+    });
+    await until(() => states.length > 0);
+    await flush();
+    expect(states[0].qrRefreshSeconds).toBe(3);
+
+    await vi.advanceTimersByTimeAsync(2999);
+    await flush();
+    expect(states.some((s) => s.qrUrl?.includes('?t='))).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(1);
+    await flush();
+    expect(states.some((s) => s.qrUrl?.includes('?t='))).toBe(true);
+    await endFlow(handle);
+  });
+
+  it('stops moving the QR once the code is claimed: it is spent', async () => {
+    useFakePollTimers();
+    stubProvider({
+      pair: json({
+        request_id: 'r1',
+        pair_url: 'https://zoreal.com/login/r1',
+        expires_in: 120,
+        display: 'qr',
+        qr_refresh_seconds: 1,
+      }),
+      statuses: [{ status: 'claimed' }, { status: 'claimed' }],
+    });
+
+    const states: PairingState[] = [];
+    const handle = startLogin({
+      clientId: 'ast_x',
+      issuer: 'https://id.zoreal.test',
+      onState: (s) => states.push(s),
+    });
+    await until(() => states.some((s) => s.status === 'claimed'));
+    await flush();
+
+    const after = states.length;
+    await vi.advanceTimersByTimeAsync(10_000);
+    await flush();
+    // The poll keeps going (claimed is not terminal); the frames do not.
+    expect(states.slice(after).some((s) => s.qrUrl?.includes('?t='))).toBe(false);
+    await endFlow(handle);
+  });
+
+  it('does not move an app link: there is no code on screen', async () => {
+    useFakePollTimers();
+    stubProvider({
+      pair: json({ request_id: 'r1', pair_url: 'https://zoreal.com/login/r1?t=TOKEN', expires_in: 120, display: 'link' }),
+      statuses: [{ status: 'pending', expires_in: 118 }],
+    });
+
+    const states: PairingState[] = [];
+    const handle = startLogin({
+      clientId: 'ast_x',
+      issuer: 'https://id.zoreal.test',
+      display: 'link',
+      onState: (s) => states.push(s),
+    });
+    await until(() => states.length > 0);
+    await flush();
+    expect(states[0].qrRefreshSeconds).toBeUndefined();
+
+    await vi.advanceTimersByTimeAsync(30_000);
+    await flush();
+    expect(states.some((s) => s.qrUrl?.includes('?t='))).toBe(false);
+    await endFlow(handle);
+  });
+
+  it('leaves a legacy pairing alone: its code does not move', async () => {
+    useFakePollTimers();
+    stubProvider({
+      pair: json({ request_id: 'r1', pair_url: 'https://zoreal.com/login/r1', expires_in: 120, display: 'legacy' }),
+      statuses: [{ status: 'pending', expires_in: 118 }],
+    });
+
+    const states: PairingState[] = [];
+    const handle = startLogin({
+      clientId: 'ast_x',
+      issuer: 'https://id.zoreal.test',
+      onState: (s) => states.push(s),
+    });
+    await until(() => states.length > 0);
+    await flush();
+
+    await vi.advanceTimersByTimeAsync(30_000);
+    await flush();
+    expect(states.some((s) => s.qrUrl?.includes('?t='))).toBe(false);
+    expect(states[0].qrRefreshSeconds).toBeUndefined();
+    await endFlow(handle);
+  });
+
+  it('cancel() stops the frames as well as the poll', async () => {
+    useFakePollTimers();
+    stubProvider({
+      pair: json({
+        request_id: 'r1',
+        pair_url: 'https://zoreal.com/login/r1',
+        expires_in: 120,
+        display: 'qr',
+        qr_refresh_seconds: 1,
+      }),
+      statuses: [{ status: 'pending', expires_in: 118 }],
+    });
+
+    const states: PairingState[] = [];
+    const handle = startLogin({
+      clientId: 'ast_x',
+      issuer: 'https://id.zoreal.test',
+      onState: (s) => states.push(s),
+    });
+    await until(() => states.length > 0);
+
+    handle.cancel();
+    await expect(handle.promise).rejects.toMatchObject({ name: 'AbortError' });
+    const after = states.length;
+
+    await vi.advanceTimersByTimeAsync(10_000);
+    await flush();
+    expect(states.length).toBe(after);
+  });
+
+  // Cancelling from inside the callback lands in the middle of emitting a
+  // frame, which is the one moment the refresh could schedule itself past the
+  // login that just ended.
+  it('stops the frames when cancelled from inside the state callback', async () => {
+    useFakePollTimers();
+    stubProvider({
+      pair: json({
+        request_id: 'r1',
+        pair_url: 'https://zoreal.com/login/r1',
+        expires_in: 120,
+        display: 'qr',
+        qr_refresh_seconds: 1,
+      }),
+      statuses: [{ status: 'pending', expires_in: 118 }],
+    });
+
+    const frames: string[] = [];
+    const handle = startLogin({
+      clientId: 'ast_x',
+      issuer: 'https://id.zoreal.test',
+      onState: (s) => {
+        if (s.qrUrl?.includes('?t=')) {
+          frames.push(s.qrUrl);
+          s.cancel!();
+        }
+      },
+    });
+    await until(() => handle.requestId !== undefined);
+
+    await vi.advanceTimersByTimeAsync(1000);
+    await expect(handle.promise).rejects.toMatchObject({ name: 'AbortError' });
+
+    await vi.advanceTimersByTimeAsync(10_000);
+    await flush();
+    expect(frames.length).toBe(1);
   });
 
   it('resolves a prompt=none immediate code as select_by session, no polling', async () => {

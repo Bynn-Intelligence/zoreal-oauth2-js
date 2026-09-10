@@ -22,12 +22,13 @@ import {
 } from './pairing';
 import { mountPairingModal, type PairingModalHandle } from './modal';
 import { challengeS256, generateState, generateVerifier } from './pkce';
-import { DEFAULT_ISSUER } from './wire';
+import { DEFAULT_ISSUER, DEFAULT_QR_REFRESH_SECONDS } from './wire';
 import type {
   AcrValue,
   AuthCodeLoginOptions,
   BrowserDirectLoginOptions,
   LoginHandle,
+  PairingState,
   SelectBy,
   ZorealCodeResponse,
   ZorealCredentialResponse,
@@ -56,6 +57,14 @@ export function startLogin(
   const issuer = options.issuer ?? DEFAULT_ISSUER;
   const controller = new AbortController();
 
+  // Decided before the pairing is created, not after: the provider binds the
+  // surface at creation, either moving QR frames or a start token that only
+  // the opened link carries, and will not serve the other one later. It
+  // depends only on the options and the user agent, so there is nothing to
+  // wait for.
+  const useAppLink =
+    options.display === 'link' || (options.display !== 'qr' && isMobileUserAgent());
+
   const surface: {
     requestId?: string;
     pairUrl?: string;
@@ -68,7 +77,13 @@ export function startLogin(
   // Mounted lazily once the provider has created a pairing, and torn down on
   // every exit from `run` below: resolution, refusal, and cancel alike.
   let modal: PairingModalHandle | null = null;
-  const closeModal = () => {
+  // The QR frame refresh, once there is one. Stopped on every exit from `run`,
+  // on cancel, and the moment the pairing leaves `pending`: from then on the
+  // code is spent and a moving image would only distract.
+  let stopRefresh: () => void = () => {};
+  controller.signal.addEventListener('abort', () => stopRefresh());
+  const teardown = () => {
+    stopRefresh();
     modal?.close();
     modal = null;
   };
@@ -95,6 +110,7 @@ export function startLogin(
           max_age: options.max_age,
           prompt: options.prompt,
           locale: options.locale,
+          display: useAppLink ? 'link' : 'qr',
         },
         controller.signal
       );
@@ -107,26 +123,45 @@ export function startLogin(
         code = started.code;
         selectBy = 'session';
       } else {
-        const useAppLink =
-          options.display === 'link' || (options.display !== 'qr' && isMobileUserAgent());
         selectBy = useAppLink ? 'app_link' : 'qr';
 
-        surface.requestId = started.request_id;
+        const requestId = started.request_id;
+        const qrBase = `${issuer}/pair/${encodeURIComponent(requestId)}/qr.svg`;
+
+        // The image moves while the pairing is pending: the provider renders
+        // a new frame every few seconds and refuses an old one, which is what
+        // makes a screenshot of the code useless. This package only has to
+        // re-fetch it on time. Nothing to move on an app-link hand-off, and
+        // nothing to move when the provider says it bound the static code.
+        const animated = !useAppLink && started.display !== 'legacy';
+        const qrRefreshSeconds = !animated
+          ? undefined
+          : typeof started.qr_refresh_seconds === 'number' && started.qr_refresh_seconds > 0
+            ? started.qr_refresh_seconds
+            : DEFAULT_QR_REFRESH_SECONDS;
+
+        surface.requestId = requestId;
         surface.pairUrl = started.pair_url;
-        surface.qrUrl = `${issuer}/pair/${encodeURIComponent(started.request_id)}/qr.svg`;
+        surface.qrUrl = qrBase;
         surface.appLink = useAppLink;
 
         // Everything a pairing UI needs, on every state it sees. The modal
         // below renders from it, and so does a caller who has opted out with
-        // pairingUI: 'none'.
-        const stateSurface = {
+        // pairingUI: 'none'. Read at call time rather than captured once,
+        // because qrUrl changes underneath while the pairing is pending.
+        const withSurface = (s: PairingState): PairingState => ({
+          ...s,
           pairUrl: surface.pairUrl,
           qrUrl: surface.qrUrl,
+          qrRefreshSeconds,
           appLink: useAppLink,
           cancel,
-        };
+        });
 
-        const initial = { status: 'pending' as const, expiresIn: started.expires_in, ...stateSurface };
+        // The last state the provider reported, so a frame refresh can emit
+        // it again with only the image changed.
+        let lastPolled: PairingState = { status: 'pending', expiresIn: started.expires_in };
+        const initial = withSurface(lastPolled);
 
         // The initial state, immediately: the first poll response is one
         // round-trip away, and a UI that waits for it opens visibly empty.
@@ -151,11 +186,63 @@ export function startLogin(
           window.location.assign(started.pair_url);
         }
 
+        if (qrRefreshSeconds !== undefined) {
+          // A deadline and a setTimeout chain, not setInterval. Background
+          // tabs throttle timers, and an interval that comes back from a
+          // throttled minute fires its backlog in one burst: several frames
+          // in one tick, for nothing. Here each frame is stamped with the
+          // clock when it is emitted, the next deadline is set from that
+          // moment, and a tab becoming visible with its deadline already past
+          // gets a current frame at once rather than whenever the throttled
+          // timer gets around to it.
+          const periodMs = qrRefreshSeconds * 1000;
+          let due = Date.now() + periodMs;
+          let timer: ReturnType<typeof setTimeout> | undefined;
+          // A flag, not just a cleared timer: a caller may cancel() from
+          // inside the onState below, and the stop then lands in the middle of
+          // emit. Without this, the line after it would schedule the next
+          // frame and the loop would outlive the login that ended it.
+          let stopped = false;
+
+          const emit = () => {
+            timer = undefined;
+            surface.qrUrl = `${qrBase}?t=${Date.now()}`;
+            const next = withSurface(lastPolled);
+            modal?.update(next);
+            options.onState?.(next);
+            if (stopped) return;
+            due = Date.now() + periodMs;
+            timer = setTimeout(emit, periodMs);
+          };
+          const onVisible = () => {
+            if (document.visibilityState === 'visible' && timer !== undefined && Date.now() >= due) {
+              clearTimeout(timer);
+              emit();
+            }
+          };
+          const hasDocument = typeof document !== 'undefined';
+          if (hasDocument) document.addEventListener('visibilitychange', onVisible);
+
+          stopRefresh = () => {
+            stopped = true;
+            if (timer !== undefined) clearTimeout(timer);
+            timer = undefined;
+            if (hasDocument) document.removeEventListener('visibilitychange', onVisible);
+            stopRefresh = () => {};
+          };
+          timer = setTimeout(emit, Math.max(0, due - Date.now()));
+        }
+
         code = await pollUntilApproved(
           issuer,
-          started.request_id,
+          requestId,
           (s) => {
-            const next = { ...s, ...stateSurface };
+            lastPolled = s;
+            // Anything but pending means the code is spent: claimed and
+            // enrolling have moved the action to the phone, the rest are
+            // terminal. Stop before emitting so no frame lands after this.
+            if (s.status !== 'pending') stopRefresh();
+            const next = withSurface(s);
             modal?.update(next);
             options.onState?.(next);
           },
@@ -163,7 +250,7 @@ export function startLogin(
         );
       }
 
-      closeModal();
+      teardown();
 
       if (flow === 'auth-code') {
         const response: ZorealCodeResponse = {
@@ -190,7 +277,7 @@ export function startLogin(
       };
       return response;
     } catch (e) {
-      closeModal();
+      teardown();
       // The taxonomy the promise rejects with, and nothing else:
       //   OAuthFlowError      the provider refused; reason verbatim
       //   FlowAbandonedError  a human outcome, or a failure that never

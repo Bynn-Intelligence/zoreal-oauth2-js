@@ -130,9 +130,17 @@ on screen, so this package does it. `startLogin` mounts a dialog, keeps it in
 step with the pairing, and takes it down when the flow settles. You render
 nothing.
 
+The code on screen changes every few seconds. Each image is one frame of the
+pairing, and the provider refuses a frame more than 30 seconds old, so a
+screenshot of the code passed to someone else is already dead when it arrives:
+signing in needs the screen as it is right now. The provider renders the
+frames and this package re-fetches the image on the interval the provider
+gives it, preloading the next one so the code never flickers to blank. There
+is nothing to configure and nothing to draw.
+
 | | |
 | --- | --- |
-| **Mobile** | No QR. The pairing link opens the ZOREAL ID app and the modal never appears. Force one or the other with `display: 'qr'` / `'link'`. |
+| **Mobile** | No QR. The pairing link opens the ZOREAL ID app and the modal never appears. Force one or the other with `display: 'qr'` / `'link'`. The choice is made before the pairing is created, because the provider binds the surface there: a link-mode pairing is claimed only by the app that opened that exact link, and has no QR at all. |
 | **Live status** | Copy and title follow the pairing: waiting for a scan, then waiting for approval once the code is claimed (the spent QR blurs out behind a phone glyph). |
 | **Countdown** | Counts down to expiry, turning amber under 20s. Reads the clock each tick rather than decrementing, so a backgrounded tab comes back honest. |
 | **Timeout** | Closes and cancels at zero. Defaults to 120s; override with `pairingTimeoutMs`. The provider's own expiry wins when it is shorter. |
@@ -184,6 +192,11 @@ startLogin({ clientId: 'ast_your_asset_id', pairingUI: 'none' });
 your own. `mountPairingModal` is also exported if you want the real dialog but
 driven on your own terms.
 
+Render the `qrUrl` from the state you are given, every time, and never cache
+the first one: it is a moving code, a fresh frame arrives every
+`qrRefreshSeconds`, and a UI holding the first URL shows one the provider has
+already refused.
+
 ## The handle
 
 `startLogin` returns synchronously with everything a UI needs to drive the
@@ -194,8 +207,8 @@ flow:
 | `promise` | resolves with the mode's result; rejects with `OAuthFlowError`, `FlowAbandonedError`, or an `AbortError` after `cancel()` |
 | `cancel()` | abandons the flow: stops the poll, rejects the promise |
 | `requestId` | the pairing request id, once the provider has created it |
-| `pairUrl` | the pairing link, once created. The same URL in QR and app link |
-| `qrUrl` | the provider-served SVG of `pairUrl`. Put it in an `<img>`; do not draw your own |
+| `pairUrl` | the pairing link, once created. On an app-link flow it carries the start token; navigate to it verbatim |
+| `qrUrl` | the provider-served SVG of the current code. Put it in an `<img>`; do not draw your own. It changes while the pairing is pending, so read it from `onState` rather than here |
 | `appLink` | true when the flow resolved to the app link (mobile) rather than a QR |
 
 `requestId`, `pairUrl`, `qrUrl` and `appLink` are `undefined` until the
@@ -203,10 +216,10 @@ pairing request exists (one round-trip), and stay `undefined` when
 `prompt: 'none'` resolves silently. The same four values also arrive on every
 `onState` callback, which is the reliable place to render from.
 
-`onState` receives a `PairingState` on every change:
+`onState` receives a `PairingState` on every change, and on every QR frame:
 `status` (`pending | claimed | approved | denied | expired | enrolling`),
-`expiresIn`, `enrolmentDeadline`, `pairUrl`, `qrUrl`, `appLink`, and
-`cancel`.
+`expiresIn`, `enrolmentDeadline`, `pairUrl`, `qrUrl`, `qrRefreshSeconds`,
+`appLink`, and `cancel`.
 
 ## What resolves, per mode
 
@@ -367,6 +380,7 @@ enforced where enforcement counts: on your backend, against the verified token.
 | `isMobileUserAgent()` | whether this user agent gets the app link rather than a QR |
 | `mountPairingModal(state, { onCancel, locale?, theme?, timeoutMs? })` | mounts the dialog yourself, for `pairingUI: 'none'` callers who still want the real one. Returns `{ update, close }`, or `null` outside a browser |
 | `DEFAULT_PAIRING_TIMEOUT_MS` | `120000`, the modal's default cap |
+| `DEFAULT_QR_REFRESH_SECONDS` | `3`, how often the QR frame is re-fetched when the provider does not say |
 
 Errors: `OAuthFlowError` (the provider refused; `error` is the OAuth code,
 `description` is the provider's reason verbatim) and `FlowAbandonedError` (a
@@ -383,8 +397,8 @@ is sent to the provider AND picks the modal's own language. See
 All types are exported: `PairingState`, `ZorealCredentialResponse`,
 `ZorealCodeResponse`, `StartLoginOptions`, `BrowserDirectLoginOptions`,
 `AuthCodeLoginOptions`, `LoginHandle`, `ErrorCode`, `NonOAuthError`,
-`SelectBy`, `AcrValue`, `PairingUI`, `ZorealTheme`, `PairingModalHandle`,
-`PairingModalOptions`, and the wire shapes.
+`SelectBy`, `AcrValue`, `PairingUI`, `PairDisplay`, `ZorealTheme`,
+`PairingModalHandle`, `PairingModalOptions`, and the wire shapes.
 
 ## Error reference
 
@@ -469,7 +483,10 @@ export function mountZorealButton(root: HTMLElement) {
     }
     if (s.qrUrl) {
       const img = document.createElement('img');
-      img.src = s.qrUrl; // provider-served; never draw your own QR of pairUrl
+      // Provider-served, and a new frame every few seconds: never draw your
+      // own QR of pairUrl, and never keep the first URL. A real UI keeps one
+      // <img> and assigns src, rather than rebuilding it as this sketch does.
+      img.src = s.qrUrl;
       img.alt = 'Scan with the ZOREAL ID app';
       panel.append(img);
     }
@@ -609,7 +626,9 @@ And the template renders the state:
 The same shape ports to Svelte (a store fed by `onState`) or Angular (a
 service exposing an observable). The rules a wrapper must keep:
 
-- Render `qrUrl` in an `<img>`; never draw your own QR of `pairUrl`.
+- Render `qrUrl` in an `<img>`; never draw your own QR of `pairUrl`. Re-render
+  it on every state: the code moves, and the last frame you were given is the
+  only one the provider still accepts.
 - Call `cancel()` on unmount or navigation. Do not add your own retry loop:
   the poll cadence is fixed because over-polling cancels the request
   server-side.

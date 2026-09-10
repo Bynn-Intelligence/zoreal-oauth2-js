@@ -14,6 +14,7 @@ import {
   SDK_NAME,
   SDK_VERSION,
   WIRE_VERSION,
+  type PairDisplay,
   type PairStartResponse,
   type PairStatusResponse,
   type TokenResponse,
@@ -46,6 +47,13 @@ export interface StartPairingParams {
   max_age?: number;
   prompt?: string;
   locale?: string;
+  /**
+   * Which surface the caller will show: 'qr' binds the pairing to moving QR
+   * frames, 'link' to a start token only the opened link carries. Decided
+   * before the request, because the provider binds it at creation and will
+   * not serve the other surface afterwards. Omitting it gets the static code.
+   */
+  display?: PairDisplay;
 }
 
 async function parseJson(response: Response): Promise<Record<string, unknown>> {
@@ -92,11 +100,18 @@ const sleep = (ms: number, signal?: AbortSignal) =>
       reject(new DOMException('aborted', 'AbortError'));
       return;
     }
-    const t = setTimeout(resolve, ms);
-    signal?.addEventListener('abort', () => {
+    // The listener comes off when the sleep ends. One poll is one sleep, and a
+    // pairing is dozens of polls on the SAME signal, so a listener left behind
+    // per sleep accumulates for as long as the login is open.
+    const onAbort = () => {
       clearTimeout(t);
       reject(new DOMException('aborted', 'AbortError'));
-    });
+    };
+    const t = setTimeout(() => {
+      signal?.removeEventListener('abort', onAbort);
+      resolve();
+    }, ms);
+    signal?.addEventListener('abort', onAbort, { once: true });
   });
 
 /**

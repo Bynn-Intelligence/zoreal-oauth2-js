@@ -60,6 +60,75 @@ describe('mountPairingModal', () => {
     handle.close();
   });
 
+  // The code on screen moves every few seconds. Swapping the visible <img>
+  // straight to the new URL blanks it until the bytes arrive, which is a
+  // flicker on the one thing the person is trying to scan.
+  it('preloads the next frame and only swaps once it has loaded', () => {
+    const loaded: Array<() => void> = [];
+    const failed: Array<() => void> = [];
+    const OriginalImage = window.Image;
+    // A stand-in for the preloader whose load is fired by the test, so the
+    // "before it loads" moment can be asserted at all.
+    vi.stubGlobal(
+      'Image',
+      class {
+        onload: (() => void) | null = null;
+        onerror: (() => void) | null = null;
+        set src(_url: string) {
+          loaded.push(() => this.onload?.());
+          failed.push(() => this.onerror?.());
+        }
+      }
+    );
+
+    const { handle } = mount();
+    const img = document.querySelector('img')!;
+    expect(img.getAttribute('src')).toBe(pending.qrUrl);
+
+    const frame2 = `${pending.qrUrl}?t=2`;
+    handle.update({ ...pending, qrUrl: frame2 });
+    // Still the old code: the new one has not arrived yet.
+    expect(img.getAttribute('src')).toBe(pending.qrUrl);
+    loaded[0]();
+    expect(img.getAttribute('src')).toBe(frame2);
+
+    // A frame that fails to load leaves the last good one on screen; the next
+    // refresh brings another.
+    const frame3 = `${pending.qrUrl}?t=3`;
+    handle.update({ ...pending, qrUrl: frame3 });
+    failed[1]();
+    expect(img.getAttribute('src')).toBe(frame2);
+
+    handle.close();
+    vi.stubGlobal('Image', OriginalImage);
+  });
+
+  it('stops swapping frames once the code is spent', () => {
+    const loaded: Array<() => void> = [];
+    const OriginalImage = window.Image;
+    vi.stubGlobal(
+      'Image',
+      class {
+        onload: (() => void) | null = null;
+        onerror: (() => void) | null = null;
+        set src(_url: string) {
+          loaded.push(() => this.onload?.());
+        }
+      }
+    );
+
+    const { handle } = mount();
+    const img = document.querySelector('img')!;
+
+    handle.update({ ...pending, status: 'claimed', qrUrl: `${pending.qrUrl}?t=2` });
+    expect(img.dataset.spent).toBe('true');
+    expect(loaded.length).toBe(0);
+    expect(img.getAttribute('src')).toBe(pending.qrUrl);
+
+    handle.close();
+    vi.stubGlobal('Image', OriginalImage);
+  });
+
   it('renders the enrolling state as its own message', () => {
     const { handle } = mount();
     handle.update({ ...pending, status: 'enrolling' });

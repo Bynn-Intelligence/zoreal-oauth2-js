@@ -213,6 +213,42 @@ export function mountPairingModal(
   const serverMs = typeof state.expiresIn === 'number' ? state.expiresIn * 1000 : Infinity;
   const deadline = Date.now() + Math.min(timeoutMs, serverMs);
 
+  // The frame swap. The provider renders a new code every few seconds and each
+  // state can carry a new qrUrl. Assigning it straight to the visible <img>
+  // blanks the image until the new bytes arrive, and on a slow link that is a
+  // flicker on the one thing the person is trying to scan. So the next frame
+  // loads off screen first and is swapped in once it has arrived; the browser
+  // serves the swap from the fetch it just made while the preload is still
+  // held. A frame that fails to load is dropped, the next state brings
+  // another. A frame superseded while still loading is dropped too: the newer
+  // one is the current code. Once the code is spent (data-spent) nothing
+  // swaps any more; the blurred image behind the phone glyph is the last one.
+  let shown = state.qrUrl;
+  let loading: HTMLImageElement | null = null;
+  const spent = () => qr.dataset.spent === 'true';
+
+  const showFrame = (url: string) => {
+    if (url === shown || spent()) return;
+    if (!shown) {
+      // Nothing on screen yet, so there is no flash to avoid.
+      qr.src = url;
+      shown = url;
+      return;
+    }
+    const next = new Image();
+    loading = next;
+    next.onload = () => {
+      if (loading !== next || spent()) return;
+      loading = null;
+      qr.src = url;
+      shown = url;
+    };
+    next.onerror = () => {
+      if (loading === next) loading = null;
+    };
+    next.src = url;
+  };
+
   const paint = (s: PairingState) => {
     // `claimed` = the request is waiting in the holder's app; `enrolling` = a
     // first-time holder finishing setup. In both the QR is spent and the action
@@ -224,7 +260,7 @@ export function mountPairingModal(
     statusLabel.textContent = settled ? t.waitingApproval : t.waiting;
     qr.dataset.spent = String(settled);
     overlay.style.display = settled ? '' : 'none';
-    if (s.qrUrl && qr.src !== s.qrUrl) qr.src = s.qrUrl;
+    if (s.qrUrl) showFrame(s.qrUrl);
   };
 
   const tick = () => {
@@ -246,6 +282,7 @@ export function mountPairingModal(
   const close = () => {
     if (closed) return;
     closed = true;
+    loading = null;
     window.clearInterval(interval);
     document.removeEventListener('keydown', onKey);
     document.body.style.overflow = previousOverflow;
