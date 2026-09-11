@@ -94,6 +94,44 @@ export function isReturnDone(requestId: string): boolean {
   return storage()?.getItem(DONE + requestId) !== null && storage()?.getItem(DONE + requestId) !== undefined;
 }
 
+/**
+ * The visible tab finishes a same-device login.
+ *
+ * The tab that started the login is left behind when the app opens, and the
+ * app reopens the page in a new tab once the holder has approved. On a phone
+ * whose browser keeps background tabs running, the old tab can see the
+ * approval first and spend the code before the reopened page has loaded, and
+ * the person then lands on a sign-in page while another tab signed in. So a
+ * hidden tab that sees the approval waits: for the page to become visible
+ * again (the person came back by hand, nothing reopened; it finishes), or for
+ * the reopened page to mark the flow done (it stands down). Resolves true to
+ * finish, false to stand down.
+ */
+export function visibleOrDone(requestId: string, signal?: AbortSignal): Promise<boolean> {
+  if (typeof document === 'undefined' || document.visibilityState !== 'hidden') {
+    return Promise.resolve(!isReturnDone(requestId));
+  }
+  return new Promise((resolve) => {
+    const finish = (value: boolean) => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('storage', onStorage);
+      signal?.removeEventListener('abort', onAbort);
+      resolve(value);
+    };
+    const onVisible = () => {
+      if (document.visibilityState !== 'hidden') finish(!isReturnDone(requestId));
+    };
+    const onStorage = () => {
+      if (isReturnDone(requestId)) finish(false);
+    };
+    const onAbort = () => finish(false);
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('storage', onStorage);
+    signal?.addEventListener('abort', onAbort, { once: true });
+    if (isReturnDone(requestId)) finish(false);
+  });
+}
+
 /** The address the app reopens: this page, without any fragment. */
 export function returnToUrl(): string | undefined {
   if (typeof window === 'undefined') return undefined;

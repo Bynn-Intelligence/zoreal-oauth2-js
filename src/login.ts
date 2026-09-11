@@ -25,12 +25,12 @@ import { holdBusy } from './busy';
 import { resolveIntent } from './intent';
 import {
   forgetReturnFlow,
-  isReturnDone,
   markReturnDone,
   peekReturnFlow,
   pendingReturnId,
   returnToUrl,
   saveReturnFlow,
+  visibleOrDone,
 } from './return';
 import { mountPairingModal, type PairingModalHandle } from './modal';
 import {
@@ -191,9 +191,10 @@ export function startLogin(
           controller.signal,
           { tolerateUnknownUntil: Date.now() + 15_000 }
         );
-        if (isReturnDone(requestId)) {
-          // The page the app reopened has finished this sign-in. This tab was
-          // left behind; it stands down rather than spend a used code.
+        // The visible tab finishes the login (return.ts, visibleOrDone): a
+        // hidden tab that sees the approval waits for the page the app
+        // reopened to finish, or for the person to come back by hand.
+        if (!(await visibleOrDone(requestId, controller.signal))) {
           throw new DOMException('aborted', 'AbortError');
         }
       } else {
