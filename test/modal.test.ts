@@ -51,6 +51,30 @@ describe('mountPairingModal', () => {
     handle.close();
   });
 
+  it('same device: opens with a disabled control, then arms it with the link', () => {
+    const en = strings('en');
+    const { handle } = mount({ status: 'pending', appLink: true });
+    expect(document.querySelector('img')).toBeNull();
+    const open = document.querySelector<HTMLAnchorElement>('a.zrl-open')!;
+    expect(open.textContent).toBe(en.openApp);
+    expect(open.hasAttribute('href')).toBe(false);
+    expect(open.getAttribute('aria-disabled')).toBe('true');
+    expect(document.body.textContent).toContain(en.bodyLink);
+    expect(document.body.textContent).not.toContain(en.noIdTitle);
+
+    handle.update({ ...pending, appLink: true });
+    expect(open.getAttribute('href')).toBe(pending.pairUrl);
+    expect(open.target).toBe('_blank');
+    expect(open.rel).toBe('noopener');
+    expect(open.hasAttribute('aria-disabled')).toBe(false);
+    expect(document.querySelector<HTMLElement>('.zrl-link-well')!.dataset.ready).toBe('true');
+
+    handle.update({ ...pending, appLink: true, status: 'claimed' });
+    expect(document.querySelector('h2')!.textContent).toBe(en.titleApprove);
+    expect(document.body.textContent).toContain(en.waitingApproval);
+    handle.close();
+  });
+
   it('locks page scroll while open and restores it on close', () => {
     document.body.style.overflow = 'scroll';
     const { handle } = mount();

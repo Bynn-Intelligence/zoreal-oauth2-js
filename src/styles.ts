@@ -259,12 +259,58 @@ export const CSS = `
    dim glow. Paused rather than removed, so it does not jump back to its start
    on the way out. */
 .${PREFIX}-qr-well[data-spent="true"] .${PREFIX}-qr-beam::after,
-.${PREFIX}-qr-well[data-spent="true"] .${PREFIX}-qr-beam-glow-band::after {
+.${PREFIX}-qr-well[data-spent="true"] .${PREFIX}-qr-beam-glow-band::after,
+.${PREFIX}-link-well[data-ready="true"] .${PREFIX}-qr-beam::after,
+.${PREFIX}-link-well[data-ready="true"] .${PREFIX}-qr-beam-glow-band::after {
   animation-play-state: paused;
   opacity: 0;
 }
-.${PREFIX}-qr-well[data-spent="true"] .${PREFIX}-qr-beam::before { opacity: 0.55; }
-.${PREFIX}-qr-well[data-spent="true"] .${PREFIX}-qr-beam-glow-band::before { opacity: 0.7; }
+.${PREFIX}-qr-well[data-spent="true"] .${PREFIX}-qr-beam::before,
+.${PREFIX}-link-well[data-ready="true"] .${PREFIX}-qr-beam::before { opacity: 0.55; }
+.${PREFIX}-qr-well[data-spent="true"] .${PREFIX}-qr-beam-glow-band::before,
+.${PREFIX}-link-well[data-ready="true"] .${PREFIX}-qr-beam-glow-band::before { opacity: 0.7; }
+
+/* Same device: no code to scan. A round well with the mark carries the same
+   light while the sign-in is being created, and settles once the link below
+   it is ready to tap. A circle keeps the sweep even all the way round. */
+.${PREFIX}-link-well {
+  position: relative;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: 112px;
+  height: 112px;
+  margin: 20px auto 0;
+  border: 1px solid var(--zrl-line);
+  border-radius: 999px;
+  background: var(--zrl-surface-sunken);
+  --zrl-radius: 56px;
+  --zrl-beam-time: 4s;
+}
+.${PREFIX}-link-well svg { position: relative; }
+
+/* The control that opens the app: a real link, because a browser hands a
+   link to an app only from a tap. It has no address until the sign-in
+   exists, and reads as disabled until then. */
+.${PREFIX}-open {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  margin: 20px 0 0;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: var(--zrl-accent);
+  color: #ffffff;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  transition: opacity 200ms ease-out, transform 150ms ease-out;
+}
+.${PREFIX}-open:active { transform: scale(0.99); }
+.${PREFIX}-open[aria-disabled="true"] { opacity: 0.45; cursor: default; pointer-events: none; }
 
 .${PREFIX}-qr {
   display: block;

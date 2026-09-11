@@ -158,7 +158,8 @@ describe('startLogin, browser-direct', () => {
     expect(result.select_by).toBe('app_link');
     const pairCall = calls.find((c) => c.url.endsWith('/pair'))!;
     expect(JSON.parse(pairCall.init!.body as string).display).toBe('link');
-    // The link carries its start token; it is navigated to verbatim.
+    // The link carries its start token; it is offered verbatim, and never
+    // navigated to from script.
     expect(handle.pairUrl).toBe('https://zoreal.com/login/r1?t=TOKEN');
   });
 
