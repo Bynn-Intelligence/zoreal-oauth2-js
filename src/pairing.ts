@@ -106,11 +106,13 @@ export async function startPairing(
  * with a redirect to its universal link, still inside the person's
  * navigation, and the app opens. The page is not unloaded when it does, and
  * polls the pairing by the `request_id` it chose here. With no app installed
- * the same redirect lands on the page that installs it.
+ * the same redirect lands on the page that installs it. `return_to` is this
+ * page's own address, which the app reopens once the holder has approved,
+ * with the pairing named in the fragment (see return.ts).
  */
 export function sameDeviceStartUrl(
   issuer: string,
-  params: StartPairingParams & { request_id: string; origin: string }
+  params: StartPairingParams & { request_id: string; origin: string; return_to?: string }
 ): string {
   const query = new URLSearchParams();
   const all: Record<string, unknown> = {

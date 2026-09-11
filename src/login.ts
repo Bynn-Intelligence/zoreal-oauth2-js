@@ -22,6 +22,15 @@ import {
   startPairing,
 } from './pairing';
 import { resolveIntent } from './intent';
+import {
+  forgetReturnFlow,
+  isReturnDone,
+  markReturnDone,
+  peekReturnFlow,
+  pendingReturnId,
+  returnToUrl,
+  saveReturnFlow,
+} from './return';
 import { mountPairingModal, type PairingModalHandle } from './modal';
 import {
   challengeS256,
@@ -40,6 +49,7 @@ import type {
   SelectBy,
   ZorealCodeResponse,
   ZorealCredentialResponse,
+  StartLoginOptions,
 } from './types';
 
 export function startLogin(
@@ -105,6 +115,7 @@ export function startLogin(
     try {
       let code: string;
       let selectBy: SelectBy = 'device';
+      let returnId: string | null = null;
 
       if (useAppLink && typeof window !== 'undefined') {
         // THE TAP IS THE NAVIGATION. Nothing is awaited between the caller's
@@ -117,6 +128,25 @@ export function startLogin(
         // provider may still be answering the navigation. No modal: there is
         // no code to scan and the page is the button that was tapped.
         const requestId = generateRequestId();
+        // The way back: the app reopens this page once the holder has
+        // approved, in a new tab, and the sign-in is finished there by
+        // resumeLogin() from what is saved here. This tab keeps polling too;
+        // whichever finishes first marks the flow done and the other stands
+        // down (see return.ts).
+        saveReturnFlow({
+          v: 1,
+          issuer,
+          clientId: options.clientId,
+          flow,
+          verifier,
+          nonce,
+          state,
+          scope: options.scope ?? 'openid',
+          appState: options.app_state,
+          requestId,
+          createdAt: Date.now(),
+        });
+        returnId = requestId;
         const startUrl = sameDeviceStartUrl(issuer, {
           client_id: options.clientId,
           scope: options.scope ?? 'openid',
@@ -133,6 +163,7 @@ export function startLogin(
           locale: options.locale,
           request_id: requestId,
           origin: window.location.origin,
+          return_to: returnToUrl(),
         });
         selectBy = 'app_link';
         surface.requestId = requestId;
@@ -155,6 +186,11 @@ export function startLogin(
           controller.signal,
           { tolerateUnknownUntil: Date.now() + 15_000 }
         );
+        if (isReturnDone(requestId)) {
+          // The page the app reopened has finished this sign-in. This tab was
+          // left behind; it stands down rather than spend a used code.
+          throw new DOMException('aborted', 'AbortError');
+        }
       } else {
       const started = await startPairing(
         issuer,
@@ -306,6 +342,8 @@ export function startLogin(
 
       }
 
+      if (returnId) markReturnDone(returnId);
+
       if (flow === 'auth-code') {
         const response: ZorealCodeResponse = {
           code,
@@ -366,6 +404,83 @@ export function startLogin(
     },
     get appLink() {
       return surface.appLink;
+    },
+  };
+}
+
+/**
+ * Finishes a same-device sign-in on the page the ZOREAL ID app reopened.
+ *
+ * Call it on every page load where `startLogin` can be called. It answers
+ * null at once when this page load is not a return; otherwise it takes the
+ * flow saved before the tap, polls the pairing named in the fragment, and
+ * resolves the way `startLogin` would have: an ID token in browser-direct
+ * mode, the code and the verifier in auth-code mode. The fragment is removed
+ * from the address bar as it is read.
+ */
+export function resumeLogin(
+  options: Pick<StartLoginOptions, 'clientId' | 'issuer' | 'onState'>
+): LoginHandle<ZorealCredentialResponse | ZorealCodeResponse> | null {
+  const id = pendingReturnId();
+  if (!id) return null;
+  const saved = peekReturnFlow(id);
+  if (!saved || saved.clientId !== options.clientId) return null;
+  forgetReturnFlow(id);
+
+  const issuer = options.issuer ?? saved.issuer;
+  const controller = new AbortController();
+  const promise = (async (): Promise<ZorealCredentialResponse | ZorealCodeResponse> => {
+    const code = await pollUntilApproved(
+      issuer,
+      id,
+      (s) => options.onState?.({ ...s, appLink: true }),
+      controller.signal,
+      { tolerateUnknownUntil: Date.now() + 5_000 }
+    );
+    let response: ZorealCredentialResponse | ZorealCodeResponse;
+    if (saved.flow === 'auth-code') {
+      response = {
+        code,
+        scope: saved.scope,
+        app_state: saved.appState,
+        code_verifier: saved.verifier,
+        nonce: saved.nonce,
+      };
+    } else {
+      const tokens = await exchangeCode(issuer, {
+        code,
+        code_verifier: saved.verifier,
+        client_id: options.clientId,
+      });
+      const claims = unsafeClaims(tokens.id_token);
+      response = {
+        credential: tokens.id_token,
+        clientId: options.clientId,
+        select_by: 'app_link',
+        acr: (claims.acr as AcrValue) ?? 'zoreal.device',
+      };
+    }
+    markReturnDone(id);
+    return response;
+  })();
+  // A rejection is the caller's to observe on the promise; it must not also
+  // surface as an unhandled rejection when they never attach to it.
+  promise.catch(() => {});
+
+  return {
+    promise,
+    cancel: () => controller.abort(),
+    get requestId() {
+      return id;
+    },
+    get pairUrl() {
+      return undefined;
+    },
+    get qrUrl() {
+      return undefined;
+    },
+    get appLink() {
+      return true;
     },
   };
 }

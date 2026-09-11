@@ -1,4 +1,4 @@
-export { startLogin } from './login';
+export { startLogin, resumeLogin } from './login';
 // Exported so a caller on pairingUI: 'none' can still mount the real dialog,
 // driven by their own onState, rather than rebuild it.
 export { mountPairingModal, DEFAULT_PAIRING_TIMEOUT_MS } from './modal';
