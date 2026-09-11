@@ -374,7 +374,11 @@ export const CSS = `
   margin: 6px 0 0;
   font-size: 12px;
   color: var(--zrl-ink-mute);
+  text-decoration: none;
+  border-radius: 6px;
+  transition: color 150ms ease-out;
 }
+.${PREFIX}-secured:hover { color: var(--zrl-ink); }
 
 .${PREFIX}-close {
   position: absolute;

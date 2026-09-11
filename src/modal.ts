@@ -214,7 +214,12 @@ export function mountPairingModal(
   const footer = el('div', cx('footer'));
   const cancelBtn = el('button', cx('cancel'), t.cancel);
   cancelBtn.type = 'button';
-  const secured = el('p', cx('secured'));
+  // The line at the foot is a link to ZOREAL itself, in a new tab so the
+  // login on this page is not abandoned. The referrer is passed on purpose.
+  const secured = el('a', cx('secured'));
+  secured.href = 'https://zoreal.com';
+  secured.target = '_blank';
+  secured.rel = 'noopener';
   secured.append(strokeIcon(13, ['M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z', 'm9 12 2 2 4-4']), document.createTextNode(t.secured));
   footer.append(cancelBtn, secured);
 
