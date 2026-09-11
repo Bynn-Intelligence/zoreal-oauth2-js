@@ -99,17 +99,6 @@ const MARK_PATHS = [
  * it reads on either ground, and it is the part that says whose sign-in this
  * is.
  */
-/** The mark alone, brand blue, for the same-device well. */
-function markOnly(size: number): SVGSVGElement {
-  const node = svg('0 0 76 76', { width: String(size), height: String(size) });
-  const g = document.createElementNS(SVG_NS, 'g');
-  g.setAttribute('fill', ZOREAL_BLUE);
-  g.setAttribute('fill-rule', 'evenodd');
-  for (const d of MARK_PATHS) g.appendChild(path(d));
-  node.appendChild(g);
-  return node;
-}
-
 function lockup(height: number): SVGSVGElement {
   const node = svg('0 0 240 58.5', {
     height: String(height),
@@ -186,22 +175,13 @@ export function mountPairingModal(
   // drawn first so the spent badge, a later sibling, stays above them. The
   // well carries the spent flag for them: a stylesheet cannot look back from
   // the image to a sibling before it.
-  // Same device: the link opens the app on this phone, so the dialog offers
-  // a link to tap instead of a code to scan. It opens before the sign-in
-  // exists, carrying the light while it is created, and the control gets its
-  // address on the first state that has one.
-  const linkMode = state.appLink === true;
-
-  const light = () => {
-    const glow = el('span', cx('qr-beam-glow'));
-    glow.setAttribute('aria-hidden', 'true');
-    glow.appendChild(el('span', cx('qr-beam-glow-band')));
-    const beam = el('span', cx('qr-beam'));
-    beam.setAttribute('aria-hidden', 'true');
-    return [glow, beam];
-  };
   const well = el('div', cx('qr-well'));
-  well.append(...light());
+  const glow = el('span', cx('qr-beam-glow'));
+  glow.setAttribute('aria-hidden', 'true');
+  glow.appendChild(el('span', cx('qr-beam-glow-band')));
+  const beam = el('span', cx('qr-beam'));
+  beam.setAttribute('aria-hidden', 'true');
+  well.append(glow, beam);
   const qr = el('img', cx('qr'));
   qr.alt = t.qrAlt;
   qr.width = 180;
@@ -222,19 +202,7 @@ export function mountPairingModal(
 
   const timer = el('p', cx('timer'));
 
-  const linkWell = el('div', cx('link-well'));
-  linkWell.append(...light(), markOnly(48));
-  // An anchor with no href is neither focusable nor clickable, which is the
-  // disabled state; the href arrives with the pairing. A new tab, so the tab
-  // that is polling for the approval is left where it is; with no app on the
-  // phone the same address is the page that installs it.
-  const open = el('a', cx('open'), t.openApp);
-  open.target = '_blank';
-  open.rel = 'noopener';
-  open.setAttribute('aria-disabled', 'true');
-
-  if (linkMode) body.append(mark, title, bodyText, linkWell, open, status, timer);
-  else body.append(mark, title, bodyText, well, status, timer);
+  body.append(mark, title, bodyText, well, status, timer);
 
   // The QR is on screen because this person is being asked to use a phone app,
   // and some of them do not have it yet. Without this the panel reads as "scan
@@ -255,24 +223,13 @@ export function mountPairingModal(
   secured.append(strokeIcon(13, ['M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z', 'm9 12 2 2 4-4']), document.createTextNode(t.secured));
   footer.append(cancelBtn, secured);
 
-  // The help line is about the code; a same-device link that finds no app
-  // lands on the page that installs it, so nothing needs saying here.
-  if (linkMode) card.append(closeBtn, body, footer);
-  else card.append(closeBtn, body, help, footer);
+  card.append(closeBtn, body, help, footer);
   scrim.appendChild(card);
 
   // A deadline, not a decremented counter: background tabs throttle timers, so
   // a counter that subtracts one per tick comes back lying about the time left.
-  // Mutable, because a same-device dialog opens before the provider has said
-  // how long the request lives; the first state that says so sets it.
-  let deadline = Date.now() + timeoutMs;
-  let serverBound = false;
-  const bindDeadline = (s: PairingState) => {
-    if (serverBound || typeof s.expiresIn !== 'number') return;
-    serverBound = true;
-    deadline = Date.now() + Math.min(timeoutMs, s.expiresIn * 1000);
-  };
-  bindDeadline(state);
+  const serverMs = typeof state.expiresIn === 'number' ? state.expiresIn * 1000 : Infinity;
+  const deadline = Date.now() + Math.min(timeoutMs, serverMs);
 
   // The frame swap. The provider renders a new code every few seconds and each
   // state can carry a new qrUrl. Assigning it straight to the visible <img>
@@ -315,27 +272,10 @@ export function mountPairingModal(
     // first-time holder finishing setup. In both the QR is spent and the action
     // has moved to the phone.
     const settled = s.status === 'claimed' || s.status === 'enrolling';
-    bindDeadline(s);
     title.textContent = settled ? t.titleApprove : titleFor(t, options.intent ?? 'sign-in');
     bodyText.textContent =
-      s.status === 'enrolling'
-        ? t.bodyEnrolling
-        : settled
-          ? t.bodyApprove
-          : linkMode
-            ? t.bodyLink
-            : t.bodyScan;
+      s.status === 'enrolling' ? t.bodyEnrolling : settled ? t.bodyApprove : t.bodyScan;
     statusLabel.textContent = settled ? t.waitingApproval : t.waiting;
-    // Same device: nothing is being waited for until the app has the request.
-    status.style.display = linkMode && !settled ? 'none' : '';
-    if (linkMode) {
-      if (s.pairUrl && !open.hasAttribute('href')) {
-        open.href = s.pairUrl;
-        open.removeAttribute('aria-disabled');
-        linkWell.dataset.ready = 'true';
-      }
-      return;
-    }
     qr.dataset.spent = String(settled);
     well.dataset.spent = String(settled);
     overlay.style.display = settled ? '' : 'none';

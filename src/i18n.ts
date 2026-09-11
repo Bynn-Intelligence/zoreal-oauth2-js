@@ -25,8 +25,6 @@ export interface PairingStrings {
   /** Dialog title once the request is waiting in the app. */
   titleApprove: string;
   bodyScan: string;
-  /** Same device: the link opens the app on this phone, so there is nothing to scan. */
-  bodyLink: string;
   bodyApprove: string;
   bodyEnrolling: string;
   waiting: string;
@@ -41,8 +39,6 @@ export interface PairingStrings {
   qrAlt: string;
   /** The default label of the sign-in button. */
   buttonContinue: string;
-  /** The same-device control that opens the app with the sign-in link. */
-  openApp: string;
 }
 
 const en: PairingStrings = {
@@ -51,7 +47,6 @@ const en: PairingStrings = {
   titlePresence: 'Scan to prove you are a real human',
   titleApprove: 'Approve on your phone',
   bodyScan: 'Scan with your phone camera or the ZOREAL ID app.',
-  bodyLink: 'Approve this sign-in in the ZOREAL ID app on this phone.',
   bodyApprove: 'Approve the login in your ZOREAL ID app.',
   bodyEnrolling: 'Finish setting up ZOREAL ID on your phone, then approve the login.',
   waiting: 'Waiting for scan',
@@ -64,7 +59,6 @@ const en: PairingStrings = {
   close: 'Close',
   qrAlt: 'QR code to sign in with ZOREAL',
   buttonContinue: 'Continue with ZOREAL',
-  openApp: 'Open ZOREAL ID',
 };
 
 const TRANSLATIONS: Record<string, PairingStrings> = {
@@ -75,7 +69,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     titlePresence: 'Skanna för att bevisa att du är en riktig människa',
     titleApprove: 'Godkänn på telefonen',
     bodyScan: 'Skanna med telefonens kamera eller ZOREAL ID-appen.',
-    bodyLink: 'Godkänn inloggningen i ZOREAL ID-appen på den här telefonen.',
     bodyApprove: 'Godkänn inloggningen i ZOREAL ID-appen.',
     bodyEnrolling: 'Slutför konfigurationen av ZOREAL ID på telefonen och godkänn sedan inloggningen.',
     waiting: 'Väntar på skanning',
@@ -88,7 +81,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     close: 'Stäng',
     qrAlt: 'QR-kod för att logga in med ZOREAL',
     buttonContinue: 'Fortsätt med ZOREAL',
-    openApp: 'Öppna ZOREAL ID',
   },
   es: {
     title: 'Escanea para iniciar sesión',
@@ -96,7 +88,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     titlePresence: 'Escanea para demostrar que eres una persona real',
     titleApprove: 'Apruébalo en tu teléfono',
     bodyScan: 'Escanea con la cámara de tu teléfono o con la app ZOREAL ID.',
-    bodyLink: 'Aprueba este inicio de sesión en la app ZOREAL ID de este teléfono.',
     bodyApprove: 'Aprueba el inicio de sesión en tu app ZOREAL ID.',
     bodyEnrolling: 'Termina de configurar ZOREAL ID en tu teléfono y luego aprueba el inicio de sesión.',
     waiting: 'Esperando el escaneo',
@@ -109,7 +100,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     close: 'Cerrar',
     qrAlt: 'Código QR para iniciar sesión con ZOREAL',
     buttonContinue: 'Continuar con ZOREAL',
-    openApp: 'Abrir ZOREAL ID',
   },
   pt: {
     title: 'Digitalize para entrar',
@@ -117,7 +107,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     titlePresence: 'Digitalize para provar que é uma pessoa real',
     titleApprove: 'Aprove no seu telefone',
     bodyScan: 'Digitalize com a câmara do seu telefone ou com a app ZOREAL ID.',
-    bodyLink: 'Aprove este início de sessão na app ZOREAL ID neste telemóvel.',
     bodyApprove: 'Aprove o login no app ZOREAL ID.',
     bodyEnrolling: 'Termine de configurar o ZOREAL ID no seu telefone e depois aprove o login.',
     waiting: 'Aguardando digitalização',
@@ -130,7 +119,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     close: 'Fechar',
     qrAlt: 'Código QR para entrar com ZOREAL',
     buttonContinue: 'Continuar com ZOREAL',
-    openApp: 'Abrir ZOREAL ID',
   },
   fr: {
     title: 'Scannez pour vous connecter',
@@ -138,7 +126,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     titlePresence: 'Scannez pour prouver que vous êtes bien un humain',
     titleApprove: 'Approuvez sur votre téléphone',
     bodyScan: "Scannez avec l'appareil photo de votre téléphone ou l'app ZOREAL ID.",
-    bodyLink: "Approuvez cette connexion dans l'app ZOREAL ID sur ce téléphone.",
     bodyApprove: 'Approuvez la connexion dans votre app ZOREAL ID.',
     bodyEnrolling: 'Terminez la configuration de ZOREAL ID sur votre téléphone, puis approuvez la connexion.',
     waiting: 'En attente du scan',
@@ -151,7 +138,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     close: 'Fermer',
     qrAlt: 'Code QR pour se connecter avec ZOREAL',
     buttonContinue: 'Continuer avec ZOREAL',
-    openApp: 'Ouvrir ZOREAL ID',
   },
   de: {
     title: 'Zum Anmelden scannen',
@@ -159,7 +145,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     titlePresence: 'Scannen, um zu beweisen, dass Sie ein echter Mensch sind',
     titleApprove: 'Auf dem Handy bestätigen',
     bodyScan: 'Mit der Handykamera oder der ZOREAL ID App scannen.',
-    bodyLink: 'Bestätigen Sie diese Anmeldung in der ZOREAL ID-App auf diesem Telefon.',
     bodyApprove: 'Anmeldung in der ZOREAL ID App bestätigen.',
     bodyEnrolling: 'ZOREAL ID auf dem Handy fertig einrichten und dann die Anmeldung bestätigen.',
     waiting: 'Warten auf Scan',
@@ -172,7 +157,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     close: 'Schließen',
     qrAlt: 'QR-Code für die Anmeldung mit ZOREAL',
     buttonContinue: 'Weiter mit ZOREAL',
-    openApp: 'ZOREAL ID öffnen',
   },
   ru: {
     title: 'Отсканируйте, чтобы войти',
@@ -180,7 +164,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     titlePresence: 'Отсканируйте, чтобы доказать, что вы реальный человек',
     titleApprove: 'Подтвердите на телефоне',
     bodyScan: 'Отсканируйте камерой телефона или через приложение ZOREAL ID.',
-    bodyLink: 'Подтвердите этот вход в приложении ZOREAL ID на этом телефоне.',
     bodyApprove: 'Подтвердите вход в приложении ZOREAL ID.',
     bodyEnrolling: 'Завершите настройку ZOREAL ID на телефоне, затем подтвердите вход.',
     waiting: 'Ожидание сканирования',
@@ -193,7 +176,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     close: 'Закрыть',
     qrAlt: 'QR-код для входа через ZOREAL',
     buttonContinue: 'Продолжить с ZOREAL',
-    openApp: 'Открыть ZOREAL ID',
   },
   ja: {
     title: 'スキャンしてログイン',
@@ -201,7 +183,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     titlePresence: 'スキャンして実在の人物であることを証明',
     titleApprove: 'スマートフォンで承認',
     bodyScan: 'スマートフォンのカメラまたはZOREAL IDアプリでスキャンしてください。',
-    bodyLink: 'このスマートフォンのZOREAL IDアプリでこのログインを承認してください。',
     bodyApprove: 'ZOREAL IDアプリでログインを承認してください。',
     bodyEnrolling: 'スマートフォンでZOREAL IDの設定を完了し、ログインを承認してください。',
     waiting: 'スキャン待ち',
@@ -214,7 +195,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     close: '閉じる',
     qrAlt: 'ZOREALでログインするためのQRコード',
     buttonContinue: 'ZOREALで続行',
-    openApp: 'ZOREAL IDを開く',
   },
   hi: {
     title: 'साइन इन करने के लिए स्कैन करें',
@@ -222,7 +202,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     titlePresence: 'यह साबित करने के लिए स्कैन करें कि आप एक वास्तविक इंसान हैं',
     titleApprove: 'अपने फोन पर स्वीकृत करें',
     bodyScan: 'अपने फोन के कैमरे या ZOREAL ID ऐप से स्कैन करें।',
-    bodyLink: 'इस फ़ोन पर ZOREAL ID ऐप में इस साइन इन को स्वीकृत करें।',
     bodyApprove: 'अपने ZOREAL ID ऐप में लॉगिन स्वीकृत करें।',
     bodyEnrolling: 'अपने फोन पर ZOREAL ID सेटअप पूरा करें, फिर लॉगिन स्वीकृत करें।',
     waiting: 'स्कैन की प्रतीक्षा है',
@@ -235,7 +214,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     close: 'बंद करें',
     qrAlt: 'ZOREAL से साइन इन करने के लिए QR कोड',
     buttonContinue: 'ZOREAL के साथ जारी रखें',
-    openApp: 'ZOREAL ID खोलें',
   },
   zhs: {
     title: '扫码登录',
@@ -243,7 +221,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     titlePresence: '扫码证明您是真人',
     titleApprove: '在手机上批准',
     bodyScan: '使用手机相机或 ZOREAL ID 应用扫描。',
-    bodyLink: '请在本手机的 ZOREAL ID 应用中批准此次登录。',
     bodyApprove: '请在 ZOREAL ID 应用中批准登录。',
     bodyEnrolling: '请在手机上完成 ZOREAL ID 设置，然后批准登录。',
     waiting: '等待扫描',
@@ -256,7 +233,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     close: '关闭',
     qrAlt: '使用 ZOREAL 登录的二维码',
     buttonContinue: '使用 ZOREAL 继续',
-    openApp: '打开 ZOREAL ID',
   },
   zht: {
     title: '掃碼登入',
@@ -264,7 +240,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     titlePresence: '掃碼證明您是真人',
     titleApprove: '在手機上核准',
     bodyScan: '使用手機相機或 ZOREAL ID 應用程式掃描。',
-    bodyLink: '請在本手機的 ZOREAL ID 應用程式中核准此次登入。',
     bodyApprove: '請在 ZOREAL ID 應用程式中核准登入。',
     bodyEnrolling: '請在手機上完成 ZOREAL ID 設定，然後核准登入。',
     waiting: '等待掃描',
@@ -277,7 +252,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     close: '關閉',
     qrAlt: '使用 ZOREAL 登入的 QR code',
     buttonContinue: '使用 ZOREAL 繼續',
-    openApp: '開啟 ZOREAL ID',
   },
   ar: {
     title: 'امسح لتسجيل الدخول',
@@ -285,7 +259,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     titlePresence: 'امسح لإثبات أنك إنسان حقيقي',
     titleApprove: 'وافق على هاتفك',
     bodyScan: 'امسح باستخدام كاميرا هاتفك أو تطبيق ZOREAL ID.',
-    bodyLink: 'وافق على تسجيل الدخول هذا في تطبيق ZOREAL ID على هذا الهاتف.',
     bodyApprove: 'وافق على تسجيل الدخول في تطبيق ZOREAL ID.',
     bodyEnrolling: 'أكمل إعداد ZOREAL ID على هاتفك، ثم وافق على تسجيل الدخول.',
     waiting: 'في انتظار المسح',
@@ -298,7 +271,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     close: 'إغلاق',
     qrAlt: 'رمز QR لتسجيل الدخول باستخدام ZOREAL',
     buttonContinue: 'المتابعة باستخدام ZOREAL',
-    openApp: 'فتح ZOREAL ID',
   },
   ko: {
     title: '스캔하여 로그인',
@@ -306,7 +278,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     titlePresence: '스캔하여 실제 사람임을 증명',
     titleApprove: '휴대폰에서 승인',
     bodyScan: '휴대폰 카메라 또는 ZOREAL ID 앱으로 스캔하세요.',
-    bodyLink: '이 휴대폰의 ZOREAL ID 앱에서 이 로그인을 승인하세요.',
     bodyApprove: 'ZOREAL ID 앱에서 로그인을 승인하세요.',
     bodyEnrolling: '휴대폰에서 ZOREAL ID 설정을 완료한 후 로그인을 승인하세요.',
     waiting: '스캔 대기 중',
@@ -319,7 +290,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     close: '닫기',
     qrAlt: 'ZOREAL로 로그인하기 위한 QR 코드',
     buttonContinue: 'ZOREAL로 계속',
-    openApp: 'ZOREAL ID 열기',
   },
   // Български
   bg: {
@@ -328,7 +298,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     titlePresence: 'Сканирайте, за да докажете, че сте истински човек',
     titleApprove: 'Потвърдете на телефона си',
     bodyScan: 'Сканирайте с камерата на телефона или с приложението ZOREAL ID.',
-    bodyLink: 'Одобрете този вход в приложението ZOREAL ID на този телефон.',
     bodyApprove: 'Потвърдете входа в приложението ZOREAL ID.',
     bodyEnrolling: 'Довършете настройката на ZOREAL ID на телефона си, след което потвърдете входа.',
     waiting: 'Изчакване на сканиране',
@@ -341,7 +310,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     close: 'Затвори',
     qrAlt: 'QR код за вход със ZOREAL',
     buttonContinue: 'Продължи със ZOREAL',
-    openApp: 'Отвори ZOREAL ID',
   },
   // বাংলা
   bn: {
@@ -350,7 +318,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     titlePresence: 'আপনি একজন প্রকৃত মানুষ তা প্রমাণ করতে স্ক্যান করুন',
     titleApprove: 'আপনার ফোনে অনুমোদন করুন',
     bodyScan: 'আপনার ফোনের ক্যামেরা বা ZOREAL ID অ্যাপ দিয়ে স্ক্যান করুন।',
-    bodyLink: 'এই ফোনের ZOREAL ID অ্যাপে এই সাইন ইন অনুমোদন করুন।',
     bodyApprove: 'আপনার ZOREAL ID অ্যাপে লগইন অনুমোদন করুন।',
     bodyEnrolling: 'আপনার ফোনে ZOREAL ID সেটআপ সম্পূর্ণ করুন, তারপর লগইন অনুমোদন করুন।',
     waiting: 'স্ক্যানের অপেক্ষায়',
@@ -363,7 +330,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     close: 'বন্ধ',
     qrAlt: 'ZOREAL দিয়ে সাইন ইন করার জন্য QR কোড',
     buttonContinue: 'ZOREAL দিয়ে চালিয়ে যান',
-    openApp: 'ZOREAL ID খুলুন',
   },
   // Bosanski
   bs: {
@@ -372,7 +338,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     titlePresence: 'Skenirajte da dokažete da ste stvarna osoba',
     titleApprove: 'Odobrite na svom telefonu',
     bodyScan: 'Skenirajte kamerom svog telefona ili aplikacijom ZOREAL ID.',
-    bodyLink: 'Odobrite ovu prijavu u aplikaciji ZOREAL ID na ovom telefonu.',
     bodyApprove: 'Odobrite prijavu u aplikaciji ZOREAL ID.',
     bodyEnrolling: 'Završite podešavanje ZOREAL ID-a na svom telefonu, a zatim odobrite prijavu.',
     waiting: 'Čeka se skeniranje',
@@ -385,7 +350,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     close: 'Zatvori',
     qrAlt: 'QR kod za prijavu putem ZOREAL-a',
     buttonContinue: 'Nastavi sa ZOREAL-om',
-    openApp: 'Otvori ZOREAL ID',
   },
   // Čeština
   cs: {
@@ -394,7 +358,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     titlePresence: 'Naskenujte a prokažte, že jste skutečný člověk',
     titleApprove: 'Potvrďte v telefonu',
     bodyScan: 'Naskenujte fotoaparátem telefonu nebo aplikací ZOREAL ID.',
-    bodyLink: 'Schvalte toto přihlášení v aplikaci ZOREAL ID na tomto telefonu.',
     bodyApprove: 'Potvrďte přihlášení v aplikaci ZOREAL ID.',
     bodyEnrolling: 'Dokončete nastavení ZOREAL ID v telefonu a poté potvrďte přihlášení.',
     waiting: 'Čekání na naskenování',
@@ -407,7 +370,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     close: 'Zavřít',
     qrAlt: 'QR kód pro přihlášení pomocí ZOREAL',
     buttonContinue: 'Pokračovat se ZOREAL',
-    openApp: 'Otevřít ZOREAL ID',
   },
   // Dansk
   da: {
@@ -416,7 +378,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     titlePresence: 'Scan for at bevise, at du er et rigtigt menneske',
     titleApprove: 'Godkend på din telefon',
     bodyScan: 'Scan med telefonens kamera eller ZOREAL ID-appen.',
-    bodyLink: 'Godkend dette login i ZOREAL ID-appen på denne telefon.',
     bodyApprove: 'Godkend login i din ZOREAL ID-app.',
     bodyEnrolling: 'Færdiggør opsætningen af ZOREAL ID på din telefon, og godkend derefter login.',
     waiting: 'Venter på scanning',
@@ -429,7 +390,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     close: 'Luk',
     qrAlt: 'QR-kode til at logge ind med ZOREAL',
     buttonContinue: 'Fortsæt med ZOREAL',
-    openApp: 'Åbn ZOREAL ID',
   },
   // Ελληνικά
   el: {
@@ -438,7 +398,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     titlePresence: 'Σάρωση για να αποδείξετε ότι είστε πραγματικός άνθρωπος',
     titleApprove: 'Έγκριση από το κινητό σας',
     bodyScan: 'Σαρώστε με την κάμερα του κινητού σας ή την εφαρμογή ZOREAL ID.',
-    bodyLink: 'Εγκρίνετε αυτή τη σύνδεση στην εφαρμογή ZOREAL ID σε αυτό το τηλέφωνο.',
     bodyApprove: 'Εγκρίνετε τη σύνδεση στην εφαρμογή ZOREAL ID.',
     bodyEnrolling: 'Ολοκληρώστε τη ρύθμιση του ZOREAL ID στο κινητό σας και έπειτα εγκρίνετε τη σύνδεση.',
     waiting: 'Αναμονή σάρωσης',
@@ -451,7 +410,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     close: 'Κλείσιμο',
     qrAlt: 'Κωδικός QR για σύνδεση με ZOREAL',
     buttonContinue: 'Συνέχεια με ZOREAL',
-    openApp: 'Άνοιγμα ZOREAL ID',
   },
   // Español (LA)
   'es-419': {
@@ -460,7 +418,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     titlePresence: 'Escanea para demostrar que eres una persona real',
     titleApprove: 'Aprueba desde tu celular',
     bodyScan: 'Escanea con la cámara de tu celular o con la app ZOREAL ID.',
-    bodyLink: 'Aprueba este inicio de sesión en la app ZOREAL ID de este teléfono.',
     bodyApprove: 'Aprueba el inicio de sesión en tu app ZOREAL ID.',
     bodyEnrolling: 'Termina de configurar ZOREAL ID en tu celular y luego aprueba el inicio de sesión.',
     waiting: 'Esperando escaneo',
@@ -473,7 +430,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     close: 'Cerrar',
     qrAlt: 'Código QR para iniciar sesión con ZOREAL',
     buttonContinue: 'Continuar con ZOREAL',
-    openApp: 'Abrir ZOREAL ID',
   },
   // Suomi
   fi: {
@@ -482,7 +438,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     titlePresence: 'Todista skannaamalla, että olet oikea ihminen',
     titleApprove: 'Hyväksy puhelimessasi',
     bodyScan: 'Skannaa puhelimesi kameralla tai ZOREAL ID -sovelluksella.',
-    bodyLink: 'Hyväksy tämä kirjautuminen ZOREAL ID -sovelluksessa tällä puhelimella.',
     bodyApprove: 'Hyväksy kirjautuminen ZOREAL ID -sovelluksessasi.',
     bodyEnrolling: 'Viimeistele ZOREAL ID -sovelluksen käyttöönotto puhelimellasi ja hyväksy sitten kirjautuminen.',
     waiting: 'Odotetaan skannausta',
@@ -495,7 +450,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     close: 'Sulje',
     qrAlt: 'QR-koodi ZOREAL-kirjautumista varten',
     buttonContinue: 'Jatka ZOREALilla',
-    openApp: 'Avaa ZOREAL ID',
   },
   // עברית
   he: {
@@ -504,7 +458,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     titlePresence: 'סרוק כדי להוכיח שאתה אדם אמיתי',
     titleApprove: 'אשר בטלפון שלך',
     bodyScan: 'סרוק באמצעות מצלמת הטלפון שלך או אפליקציית ZOREAL ID.',
-    bodyLink: 'אשר את ההתחברות הזו באפליקציית ZOREAL ID בטלפון הזה.',
     bodyApprove: 'אשר את ההתחברות באפליקציית ZOREAL ID שלך.',
     bodyEnrolling: 'סיים להגדיר את ZOREAL ID בטלפון שלך, ואז אשר את ההתחברות.',
     waiting: 'ממתין לסריקה',
@@ -517,7 +470,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     close: 'סגור',
     qrAlt: 'קוד QR להתחברות עם ZOREAL',
     buttonContinue: 'המשך עם ZOREAL',
-    openApp: 'פתח את ZOREAL ID',
   },
   // Hrvatski
   hr: {
@@ -526,7 +478,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     titlePresence: 'Skenirajte kako biste dokazali da ste stvarna osoba',
     titleApprove: 'Odobrite na svom mobitelu',
     bodyScan: 'Skenirajte kamerom svog mobitela ili aplikacijom ZOREAL ID.',
-    bodyLink: 'Odobrite ovu prijavu u aplikaciji ZOREAL ID na ovom telefonu.',
     bodyApprove: 'Odobrite prijavu u aplikaciji ZOREAL ID.',
     bodyEnrolling: 'Dovršite postavljanje ZOREAL ID-a na svom mobitelu, a zatim odobrite prijavu.',
     waiting: 'Čeka se skeniranje',
@@ -539,7 +490,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     close: 'Zatvori',
     qrAlt: 'QR kod za prijavu putem ZOREAL-a',
     buttonContinue: 'Nastavi sa ZOREAL-om',
-    openApp: 'Otvori ZOREAL ID',
   },
   // Magyar
   hu: {
@@ -548,7 +498,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     titlePresence: 'Olvassa be annak igazolásához, hogy valódi ember',
     titleApprove: 'Jóváhagyás a telefonján',
     bodyScan: 'Olvassa be a telefonja kamerájával, vagy a ZOREAL ID alkalmazással.',
-    bodyLink: 'Hagyja jóvá ezt a bejelentkezést a ZOREAL ID alkalmazásban ezen a telefonon.',
     bodyApprove: 'Hagyja jóvá a bejelentkezést a ZOREAL ID alkalmazásban.',
     bodyEnrolling: 'Fejezze be a ZOREAL ID beállítását a telefonján, majd hagyja jóvá a bejelentkezést.',
     waiting: 'Várakozás beolvasásra',
@@ -561,7 +510,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     close: 'Bezárás',
     qrAlt: 'QR-kód a ZOREAL-lal való bejelentkezéshez',
     buttonContinue: 'Folytatás a ZOREAL-lal',
-    openApp: 'ZOREAL ID megnyitása',
   },
   // Bahasa Indonesia
   id: {
@@ -570,7 +518,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     titlePresence: 'Pindai untuk membuktikan bahwa Anda manusia sungguhan',
     titleApprove: 'Setujui di ponsel Anda',
     bodyScan: 'Pindai dengan kamera ponsel atau aplikasi ZOREAL ID.',
-    bodyLink: 'Setujui masuk ini di aplikasi ZOREAL ID pada ponsel ini.',
     bodyApprove: 'Setujui proses masuk di aplikasi ZOREAL ID Anda.',
     bodyEnrolling: 'Selesaikan pengaturan ZOREAL ID di ponsel Anda, lalu setujui proses masuk.',
     waiting: 'Menunggu pemindaian',
@@ -583,7 +530,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     close: 'Tutup',
     qrAlt: 'Kode QR untuk masuk dengan ZOREAL',
     buttonContinue: 'Lanjutkan dengan ZOREAL',
-    openApp: 'Buka ZOREAL ID',
   },
   // Italiano
   it: {
@@ -592,7 +538,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     titlePresence: 'Scansiona per dimostrare di essere una persona reale',
     titleApprove: 'Approva sul tuo telefono',
     bodyScan: 'Scansiona con la fotocamera del telefono o con l\'app ZOREAL ID.',
-    bodyLink: 'Approva questo accesso nell\'app ZOREAL ID su questo telefono.',
     bodyApprove: 'Approva l\'accesso nell\'app ZOREAL ID.',
     bodyEnrolling: 'Completa la configurazione di ZOREAL ID sul telefono, poi approva l\'accesso.',
     waiting: 'In attesa della scansione',
@@ -605,7 +550,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     close: 'Chiudi',
     qrAlt: 'Codice QR per accedere con ZOREAL',
     buttonContinue: 'Continua con ZOREAL',
-    openApp: 'Apri ZOREAL ID',
   },
   // Bahasa Melayu
   ms: {
@@ -614,7 +558,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     titlePresence: 'Imbas untuk membuktikan anda manusia sebenar',
     titleApprove: 'Luluskan di telefon anda',
     bodyScan: 'Imbas dengan kamera telefon atau aplikasi ZOREAL ID.',
-    bodyLink: 'Luluskan log masuk ini dalam aplikasi ZOREAL ID pada telefon ini.',
     bodyApprove: 'Luluskan log masuk dalam aplikasi ZOREAL ID anda.',
     bodyEnrolling: 'Selesaikan persediaan ZOREAL ID di telefon anda, kemudian luluskan log masuk.',
     waiting: 'Menunggu imbasan',
@@ -627,7 +570,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     close: 'Tutup',
     qrAlt: 'Kod QR untuk log masuk dengan ZOREAL',
     buttonContinue: 'Teruskan dengan ZOREAL',
-    openApp: 'Buka ZOREAL ID',
   },
   // Nederlands
   nl: {
@@ -636,7 +578,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     titlePresence: 'Scan om te bewijzen dat je een echt mens bent',
     titleApprove: 'Keur goed op je telefoon',
     bodyScan: 'Scan met de camera van je telefoon of de ZOREAL ID-app.',
-    bodyLink: 'Keur deze aanmelding goed in de ZOREAL ID-app op deze telefoon.',
     bodyApprove: 'Keur de aanmelding goed in je ZOREAL ID-app.',
     bodyEnrolling: 'Rond het instellen van ZOREAL ID op je telefoon af en keur daarna de aanmelding goed.',
     waiting: 'Wachten op scan',
@@ -649,7 +590,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     close: 'Sluiten',
     qrAlt: 'QR-code om in te loggen met ZOREAL',
     buttonContinue: 'Doorgaan met ZOREAL',
-    openApp: 'ZOREAL ID openen',
   },
   // Norsk
   no: {
@@ -658,7 +598,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     titlePresence: 'Skann for å bevise at du er et ekte menneske',
     titleApprove: 'Godkjenn på telefonen din',
     bodyScan: 'Skann med telefonens kamera eller ZOREAL ID-appen.',
-    bodyLink: 'Godkjenn denne innloggingen i ZOREAL ID-appen på denne telefonen.',
     bodyApprove: 'Godkjenn innloggingen i ZOREAL ID-appen din.',
     bodyEnrolling: 'Fullfør oppsettet av ZOREAL ID på telefonen din, og godkjenn deretter innloggingen.',
     waiting: 'Venter på skanning',
@@ -671,7 +610,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     close: 'Lukk',
     qrAlt: 'QR-kode for å logge inn med ZOREAL',
     buttonContinue: 'Fortsett med ZOREAL',
-    openApp: 'Åpne ZOREAL ID',
   },
   // Polski
   pl: {
@@ -680,7 +618,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     titlePresence: 'Zeskanuj, aby udowodnić, że jesteś prawdziwym człowiekiem',
     titleApprove: 'Zatwierdź w telefonie',
     bodyScan: 'Zeskanuj aparatem telefonu lub aplikacją ZOREAL ID.',
-    bodyLink: 'Zatwierdź to logowanie w aplikacji ZOREAL ID na tym telefonie.',
     bodyApprove: 'Zatwierdź logowanie w aplikacji ZOREAL ID.',
     bodyEnrolling: 'Dokończ konfigurację ZOREAL ID w telefonie, a następnie zatwierdź logowanie.',
     waiting: 'Czekanie na skan',
@@ -693,7 +630,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     close: 'Zamknij',
     qrAlt: 'Kod QR do logowania za pomocą ZOREAL',
     buttonContinue: 'Kontynuuj z ZOREAL',
-    openApp: 'Otwórz ZOREAL ID',
   },
   // Português (BR)
   'pt-br': {
@@ -702,7 +638,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     titlePresence: 'Escaneie para provar que você é uma pessoa real',
     titleApprove: 'Aprove no seu celular',
     bodyScan: 'Escaneie com a câmera do seu celular ou com o app ZOREAL ID.',
-    bodyLink: 'Aprove este login no app ZOREAL ID neste celular.',
     bodyApprove: 'Aprove o login no app ZOREAL ID.',
     bodyEnrolling: 'Termine de configurar o ZOREAL ID no seu celular e depois aprove o login.',
     waiting: 'Aguardando escaneamento',
@@ -715,7 +650,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     close: 'Fechar',
     qrAlt: 'Código QR para entrar com ZOREAL',
     buttonContinue: 'Continuar com ZOREAL',
-    openApp: 'Abrir ZOREAL ID',
   },
   // Română
   ro: {
@@ -724,7 +658,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     titlePresence: 'Scanați pentru a dovedi că sunteți o persoană reală',
     titleApprove: 'Aprobați de pe telefon',
     bodyScan: 'Scanați cu camera telefonului sau cu aplicația ZOREAL ID.',
-    bodyLink: 'Aprobați această conectare în aplicația ZOREAL ID de pe acest telefon.',
     bodyApprove: 'Aprobați conectarea în aplicația ZOREAL ID.',
     bodyEnrolling: 'Finalizați configurarea ZOREAL ID pe telefon, apoi aprobați conectarea.',
     waiting: 'Se așteaptă scanarea',
@@ -737,7 +670,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     close: 'Închide',
     qrAlt: 'Cod QR pentru conectare cu ZOREAL',
     buttonContinue: 'Continuați cu ZOREAL',
-    openApp: 'Deschideți ZOREAL ID',
   },
   // Српски
   sr: {
@@ -746,7 +678,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     titlePresence: 'Скенирајте да докажете да сте права особа',
     titleApprove: 'Одобрите на свом телефону',
     bodyScan: 'Скенирајте камером свог телефона или апликацијом ZOREAL ID.',
-    bodyLink: 'Одобрите ову пријаву у апликацији ZOREAL ID на овом телефону.',
     bodyApprove: 'Одобрите пријаву у апликацији ZOREAL ID.',
     bodyEnrolling: 'Довршите подешавање ZOREAL ID-а на свом телефону, па одобрите пријаву.',
     waiting: 'Чека се скенирање',
@@ -759,7 +690,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     close: 'Затвори',
     qrAlt: 'QR код за пријаву преко ZOREAL-а',
     buttonContinue: 'Настави са ZOREAL-ом',
-    openApp: 'Отвори ZOREAL ID',
   },
   // ไทย
   th: {
@@ -768,7 +698,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     titlePresence: 'สแกนเพื่อพิสูจน์ว่าคุณเป็นมนุษย์จริง',
     titleApprove: 'อนุมัติบนโทรศัพท์ของคุณ',
     bodyScan: 'สแกนด้วยกล้องโทรศัพท์หรือแอป ZOREAL ID',
-    bodyLink: 'อนุมัติการเข้าสู่ระบบนี้ในแอป ZOREAL ID บนโทรศัพท์เครื่องนี้',
     bodyApprove: 'อนุมัติการเข้าสู่ระบบในแอป ZOREAL ID ของคุณ',
     bodyEnrolling: 'ตั้งค่า ZOREAL ID บนโทรศัพท์ของคุณให้เสร็จสิ้น แล้วอนุมัติการเข้าสู่ระบบ',
     waiting: 'รอการสแกน',
@@ -781,7 +710,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     close: 'ปิด',
     qrAlt: 'คิวอาร์โค้ดสำหรับเข้าสู่ระบบด้วย ZOREAL',
     buttonContinue: 'ดำเนินการต่อด้วย ZOREAL',
-    openApp: 'เปิด ZOREAL ID',
   },
   // Tagalog
   tl: {
@@ -790,7 +718,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     titlePresence: 'I-scan para patunayang tunay kang tao',
     titleApprove: 'I-approve sa iyong telepono',
     bodyScan: 'I-scan gamit ang camera ng iyong telepono o ang ZOREAL ID app.',
-    bodyLink: 'Aprubahan ang pag-sign in na ito sa ZOREAL ID app sa teleponong ito.',
     bodyApprove: 'I-approve ang login sa iyong ZOREAL ID app.',
     bodyEnrolling: 'Tapusin muna ang pag-set up ng ZOREAL ID sa iyong telepono, pagkatapos ay i-approve ang login.',
     waiting: 'Naghihintay ng scan',
@@ -803,7 +730,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     close: 'Isara',
     qrAlt: 'QR code para mag-sign in gamit ang ZOREAL',
     buttonContinue: 'Magpatuloy gamit ang ZOREAL',
-    openApp: 'Buksan ang ZOREAL ID',
   },
   // Türkçe
   tr: {
@@ -812,7 +738,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     titlePresence: 'Gerçek bir insan olduğunuzu kanıtlamak için tarayın',
     titleApprove: 'Telefonunuzdan onaylayın',
     bodyScan: 'Telefonunuzun kamerasıyla veya ZOREAL ID uygulamasıyla tarayın.',
-    bodyLink: 'Bu girişi bu telefondaki ZOREAL ID uygulamasında onaylayın.',
     bodyApprove: 'Girişi ZOREAL ID uygulamanızdan onaylayın.',
     bodyEnrolling: 'Telefonunuzda ZOREAL ID kurulumunu tamamlayın, ardından girişi onaylayın.',
     waiting: 'Tarama bekleniyor',
@@ -825,7 +750,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     close: 'Kapat',
     qrAlt: 'ZOREAL ile giriş yapmak için QR kodu',
     buttonContinue: 'ZOREAL ile devam et',
-    openApp: 'ZOREAL ID\'yi aç',
   },
   // Українська
   uk: {
@@ -834,7 +758,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     titlePresence: 'Скануйте, щоб довести, що ви справжня людина',
     titleApprove: 'Підтвердьте на телефоні',
     bodyScan: 'Скануйте камерою телефону або додатком ZOREAL ID.',
-    bodyLink: 'Підтвердьте цей вхід у застосунку ZOREAL ID на цьому телефоні.',
     bodyApprove: 'Підтвердьте вхід у додатку ZOREAL ID.',
     bodyEnrolling: 'Завершіть налаштування ZOREAL ID на телефоні, а потім підтвердьте вхід.',
     waiting: 'Очікування сканування',
@@ -847,7 +770,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     close: 'Закрити',
     qrAlt: 'QR-код для входу через ZOREAL',
     buttonContinue: 'Продовжити з ZOREAL',
-    openApp: 'Відкрити ZOREAL ID',
   },
   // اردو
   ur: {
@@ -856,7 +778,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     titlePresence: 'یہ ثابت کرنے کے لیے اسکین کریں کہ آپ ایک حقیقی انسان ہیں',
     titleApprove: 'اپنے فون پر منظوری دیں',
     bodyScan: 'اپنے فون کے کیمرے یا ZOREAL ID ایپ سے اسکین کریں۔',
-    bodyLink: 'اس فون پر ZOREAL ID ایپ میں اس لاگ اِن کی منظوری دیں۔',
     bodyApprove: 'اپنی ZOREAL ID ایپ میں لاگ اِن کی منظوری دیں۔',
     bodyEnrolling: 'اپنے فون پر ZOREAL ID کی سیٹ اپ مکمل کریں، پھر لاگ اِن کی منظوری دیں۔',
     waiting: 'اسکین کا انتظار',
@@ -869,7 +790,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     close: 'بند کریں',
     qrAlt: 'ZOREAL کے ساتھ لاگ اِن کرنے کے لیے QR کوڈ',
     buttonContinue: 'ZOREAL کے ساتھ جاری رکھیں',
-    openApp: 'ZOREAL ID کھولیں',
   },
   // Tiếng Việt
   vi: {
@@ -878,7 +798,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     titlePresence: 'Quét để chứng minh bạn là người thật',
     titleApprove: 'Phê duyệt trên điện thoại của bạn',
     bodyScan: 'Quét bằng camera điện thoại hoặc ứng dụng ZOREAL ID.',
-    bodyLink: 'Phê duyệt lần đăng nhập này trong ứng dụng ZOREAL ID trên điện thoại này.',
     bodyApprove: 'Phê duyệt đăng nhập trong ứng dụng ZOREAL ID của bạn.',
     bodyEnrolling: 'Hoàn tất thiết lập ZOREAL ID trên điện thoại, sau đó phê duyệt đăng nhập.',
     waiting: 'Đang chờ quét mã',
@@ -891,7 +810,6 @@ const TRANSLATIONS: Record<string, PairingStrings> = {
     close: 'Đóng',
     qrAlt: 'Mã QR để đăng nhập bằng ZOREAL',
     buttonContinue: 'Tiếp tục với ZOREAL',
-    openApp: 'Mở ZOREAL ID',
   },
 };
 

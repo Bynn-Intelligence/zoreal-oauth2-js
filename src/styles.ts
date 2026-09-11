@@ -259,58 +259,12 @@ export const CSS = `
    dim glow. Paused rather than removed, so it does not jump back to its start
    on the way out. */
 .${PREFIX}-qr-well[data-spent="true"] .${PREFIX}-qr-beam::after,
-.${PREFIX}-qr-well[data-spent="true"] .${PREFIX}-qr-beam-glow-band::after,
-.${PREFIX}-link-well[data-ready="true"] .${PREFIX}-qr-beam::after,
-.${PREFIX}-link-well[data-ready="true"] .${PREFIX}-qr-beam-glow-band::after {
+.${PREFIX}-qr-well[data-spent="true"] .${PREFIX}-qr-beam-glow-band::after {
   animation-play-state: paused;
   opacity: 0;
 }
-.${PREFIX}-qr-well[data-spent="true"] .${PREFIX}-qr-beam::before,
-.${PREFIX}-link-well[data-ready="true"] .${PREFIX}-qr-beam::before { opacity: 0.55; }
-.${PREFIX}-qr-well[data-spent="true"] .${PREFIX}-qr-beam-glow-band::before,
-.${PREFIX}-link-well[data-ready="true"] .${PREFIX}-qr-beam-glow-band::before { opacity: 0.7; }
-
-/* Same device: no code to scan. A round well with the mark carries the same
-   light while the sign-in is being created, and settles once the link below
-   it is ready to tap. A circle keeps the sweep even all the way round. */
-.${PREFIX}-link-well {
-  position: relative;
-  display: grid;
-  place-items: center;
-  box-sizing: border-box;
-  width: 112px;
-  height: 112px;
-  margin: 20px auto 0;
-  border: 1px solid var(--zrl-line);
-  border-radius: 999px;
-  background: var(--zrl-surface-sunken);
-  --zrl-radius: 56px;
-  --zrl-beam-time: 4s;
-}
-.${PREFIX}-link-well svg { position: relative; }
-
-/* The control that opens the app: a real link, because a browser hands a
-   link to an app only from a tap. It has no address until the sign-in
-   exists, and reads as disabled until then. */
-.${PREFIX}-open {
-  display: block;
-  box-sizing: border-box;
-  width: 100%;
-  margin: 20px 0 0;
-  padding: 12px 16px;
-  border-radius: 12px;
-  background: var(--zrl-accent);
-  color: #ffffff;
-  font: inherit;
-  font-size: 15px;
-  font-weight: 600;
-  text-align: center;
-  text-decoration: none;
-  cursor: pointer;
-  transition: opacity 200ms ease-out, transform 150ms ease-out;
-}
-.${PREFIX}-open:active { transform: scale(0.99); }
-.${PREFIX}-open[aria-disabled="true"] { opacity: 0.45; cursor: default; pointer-events: none; }
+.${PREFIX}-qr-well[data-spent="true"] .${PREFIX}-qr-beam::before { opacity: 0.55; }
+.${PREFIX}-qr-well[data-spent="true"] .${PREFIX}-qr-beam-glow-band::before { opacity: 0.7; }
 
 .${PREFIX}-qr {
   display: block;
@@ -461,6 +415,65 @@ export const CSS = `
 }
 
 @keyframes ${PREFIX}-orbit { to { transform: rotate(360deg) } }
+/* THE BUSY RING. The light of the QR well, around any control that is
+   waiting on the provider: the button on a phone between the tap and the
+   hand-over to the app. The well's sweep is a cone from the centre, which is
+   even on a square and useless on a wide button: it crawls along the long
+   sides and lights two edges at once near the ends. So here the light is a
+   dash on an SVG outline, which moves at one speed the whole way round
+   whatever the shape, drawn with the well's tokens: its colour and head
+   tint, its line width, its halo, its four second lap. pathLength makes the
+   outline 100 units long, so every dash and offset is a percentage of the
+   way round; the three layers share one head at 30 and differ in length
+   and brightness, which is the comet's tail. Shown only while busy. */
+.${PREFIX}-ring {
+  position: relative;
+  display: inline-flex;
+  vertical-align: middle;
+  --zrl-beam-time: 4s;
+}
+.${PREFIX}-ring-svg {
+  position: absolute;
+  inset: -4px;
+  width: calc(100% + 8px);
+  height: calc(100% + 8px);
+  overflow: visible;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 200ms ease-out;
+}
+.${PREFIX}-ring[data-busy="true"] > .${PREFIX}-ring-svg { opacity: 1; }
+.${PREFIX}-ring-svg rect {
+  x: 2px;
+  y: 2px;
+  width: calc(100% - 4px);
+  height: calc(100% - 4px);
+  fill: none;
+  stroke: var(--zrl-beam);
+  stroke-width: var(--zrl-beam-line);
+  stroke-linecap: round;
+  animation: ${PREFIX}-dash var(--zrl-beam-time) linear infinite;
+}
+.${PREFIX}-ring-tail { stroke-dasharray: 30 70; stroke-dashoffset: 0; opacity: 0.35; }
+.${PREFIX}-ring-body { stroke-dasharray: 16 84; stroke-dashoffset: -14; opacity: 0.8; }
+.${PREFIX}-ring-head { stroke-dasharray: 5 95; stroke-dashoffset: -25; stroke: var(--zrl-beam-head); }
+.${PREFIX}-ring-halo {
+  stroke-dasharray: 30 70;
+  stroke-dashoffset: 0;
+  stroke-width: calc(var(--zrl-glow-core) * 2 + var(--zrl-beam-line));
+  opacity: calc(var(--zrl-glow-opacity) * 0.5);
+  filter: blur(var(--zrl-glow-blur));
+}
+@keyframes ${PREFIX}-dash {
+  to { stroke-dashoffset: calc(var(--zrl-dash-start, 0) - 100); }
+}
+.${PREFIX}-ring-body { --zrl-dash-start: -14; }
+.${PREFIX}-ring-head { --zrl-dash-start: -25; }
+@media (prefers-reduced-motion: reduce) {
+  .${PREFIX}-ring-svg rect { animation: none; stroke-dasharray: none; opacity: 0.45; }
+  .${PREFIX}-ring-halo, .${PREFIX}-ring-head { display: none; }
+}
+
 
 @media (prefers-reduced-motion: reduce) {
   .${PREFIX}-scrim,

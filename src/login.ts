@@ -96,22 +96,6 @@ export function startLogin(
     const nonce = generateState();
 
     try {
-      // Same device: the dialog opens on the tap, before the provider has
-      // answered, so the light runs while the sign-in is created and the
-      // person is never looking at nothing.
-      if ((options.pairingUI ?? 'modal') === 'modal' && useAppLink) {
-        modal = mountPairingModal(
-          { status: 'pending', appLink: true, intent, cancel },
-          {
-            onCancel: cancel,
-            intent,
-            locale: options.locale,
-            theme: options.theme,
-            timeoutMs: options.pairingTimeoutMs,
-          }
-        );
-      }
-
       const started = await startPairing(
         issuer,
         {
@@ -186,11 +170,9 @@ export function startLogin(
         // round-trip away, and a UI that waits for it opens visibly empty.
         options.onState?.(initial);
 
-        if (modal) {
-          // The same-device dialog, already open: this state carries the link
-          // its control was waiting for.
-          modal.update(initial);
-        } else if ((options.pairingUI ?? 'modal') === 'modal') {
+        // No modal for an app-link hand-off: there is no code to scan, the
+        // phone is already being sent to the app.
+        if ((options.pairingUI ?? 'modal') === 'modal' && !useAppLink) {
           modal = mountPairingModal(initial, {
             onCancel: cancel,
             intent,
@@ -199,11 +181,16 @@ export function startLogin(
             timeoutMs: options.pairingTimeoutMs,
           });
         }
-        // The same-device link is never navigated to from here. A browser
-        // hands a link to an app only from a tap, not from a script running
-        // after a network round trip, so a navigation here lands on the web
-        // page instead and takes the polling tab with it. The dialog's
-        // control is that tap.
+
+        if (useAppLink && typeof window !== 'undefined') {
+          // The universal link, in the same tab: the app claims it, and with
+          // no app installed the same URL is the real pairing page, which can
+          // enrol. A popup here would be blocked more often than it would
+          // help. Between the tap and this line there is one round trip, so
+          // the button that was tapped should be disabled and show it is
+          // working; the promise settles or rejects when the flow ends.
+          window.location.assign(started.pair_url);
+        }
 
         if (qrRefreshSeconds !== undefined) {
           // A deadline and a setTimeout chain, not setInterval. Background
