@@ -78,6 +78,8 @@ export interface PairingState {
    * you and arrives through this callback.
    */
   qrRefreshSeconds?: number;
+  /** What the dialog says the code is for, resolved once per login. */
+  intent?: LoginIntent;
   /** True when the flow resolved to the app link (mobile) rather than a QR. */
   appLink?: boolean;
   /** Abandons this pairing: stops the poll. Wire it to your UI's cancel control. */
@@ -134,6 +136,13 @@ export type ZorealTheme = 'auto' | 'light' | 'dark';
  */
 export type PairingUI = 'modal' | 'none';
 
+/**
+ * What the pairing dialog says it is for. Resolved from the request when not
+ * given: document scopes make it 'identify', an identifier-only request with
+ * a liveness capture makes it 'presence', and the rest is 'sign-in'.
+ */
+export type LoginIntent = 'sign-in' | 'identify' | 'presence';
+
 export interface StartLoginOptions {
   /** The asset token from the ZOREAL dashboard, ast_... */
   clientId: string;
@@ -155,6 +164,12 @@ export interface StartLoginOptions {
   app_state?: string;
   /** 'auto' renders a QR on desktop and an app link on mobile, which is what you want. */
   display?: 'auto' | 'qr' | 'link';
+  /**
+   * What the dialog tells the holder they are scanning for. Set it when the
+   * scope does not say: a presence check that asks for a name is still not a
+   * sign-in. See LoginIntent for what is inferred when this is omitted.
+   */
+  intent?: LoginIntent;
   /** Sent to the provider so the pairing surface speaks the visitor's language. */
   locale?: string;
   /** Called on each pairing state change. Drive your UI from this. */

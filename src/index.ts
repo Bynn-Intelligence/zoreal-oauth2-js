@@ -14,6 +14,7 @@ export {
 export type { StartPairingParams } from './pairing';
 export { challengeS256, generateState, generateVerifier } from './pkce';
 export { unsafeClaims } from './jwt';
+export { resolveIntent } from './intent';
 export {
   DEFAULT_ISSUER,
   DEFAULT_QR_REFRESH_SECONDS,
@@ -37,6 +38,7 @@ export type {
   BrowserDirectLoginOptions,
   ErrorCode,
   LoginHandle,
+  LoginIntent,
   NonOAuthError,
   PairingState,
   PairingUI,

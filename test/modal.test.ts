@@ -39,6 +39,18 @@ describe('mountPairingModal', () => {
     handle.close();
   });
 
+  it('opens with the title for the intent it was given', () => {
+    const en = strings('en');
+    let { handle } = mount(pending, { intent: 'identify' });
+    expect(document.querySelector('h2')!.textContent).toBe(en.titleIdentify);
+    handle.close();
+    ({ handle } = mount(pending, { intent: 'presence' }));
+    expect(document.querySelector('h2')!.textContent).toBe(en.titlePresence);
+    handle.update({ ...pending, status: 'claimed' });
+    expect(document.querySelector('h2')!.textContent).toBe(en.titleApprove);
+    handle.close();
+  });
+
   it('locks page scroll while open and restores it on close', () => {
     document.body.style.overflow = 'scroll';
     const { handle } = mount();

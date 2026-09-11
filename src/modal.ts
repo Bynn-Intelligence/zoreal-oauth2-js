@@ -12,8 +12,9 @@
  */
 
 import { interpolate, isRtl, strings } from './i18n';
+import { titleFor } from './intent';
 import { cx, ensureStyles } from './styles';
-import type { PairingState, ZorealTheme } from './types';
+import type { LoginIntent, PairingState, ZorealTheme } from './types';
 
 /** Our own cap on how long a pairing sits on screen. See `pairingTimeoutMs`. */
 export const DEFAULT_PAIRING_TIMEOUT_MS = 120_000;
@@ -120,6 +121,8 @@ export interface PairingModalOptions {
   locale?: string;
   theme?: ZorealTheme;
   timeoutMs?: number;
+  /** Which title the dialog opens with. Defaults to the sign-in wording. */
+  intent?: LoginIntent;
 }
 
 export interface PairingModalHandle {
@@ -264,7 +267,7 @@ export function mountPairingModal(
     // first-time holder finishing setup. In both the QR is spent and the action
     // has moved to the phone.
     const settled = s.status === 'claimed' || s.status === 'enrolling';
-    title.textContent = settled ? t.titleApprove : t.title;
+    title.textContent = settled ? t.titleApprove : titleFor(t, options.intent ?? 'sign-in');
     bodyText.textContent =
       s.status === 'enrolling' ? t.bodyEnrolling : settled ? t.bodyApprove : t.bodyScan;
     statusLabel.textContent = settled ? t.waitingApproval : t.waiting;

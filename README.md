@@ -142,11 +142,12 @@ is nothing to configure and nothing to draw.
 | --- | --- |
 | **Mobile** | No QR. The pairing link opens the ZOREAL ID app and the modal never appears. Force one or the other with `display: 'qr'` / `'link'`. The choice is made before the pairing is created, because the provider binds the surface there: a link-mode pairing is claimed only by the app that opened that exact link, and has no QR at all. |
 | **Live status** | Copy and title follow the pairing: waiting for a scan, then waiting for approval once the code is claimed (the spent QR blurs out behind a phone glyph). |
+| **Title** | Says what the scan is for, inferred from the request: "Scan to sign in" for `openid`, `email` and `profile.name`; "Scan to verify your identity" once a document attribute such as `zoreal.age` or `profile.birthdate` is requested; "Scan to prove you are a real human" for `openid` alone with `acr_values: 'zoreal.live'`. Override with `intent`, one of `'sign-in'`, `'identify'`, `'presence'`, when the scope does not say. |
 | **Countdown** | Counts down to expiry, turning amber under 20s. Reads the clock each tick rather than decrementing, so a backgrounded tab comes back honest. |
 | **Timeout** | Closes and cancels at zero. Defaults to 120s; override with `pairingTimeoutMs`. The provider's own expiry wins when it is shorter. |
 | **Cancel** | The X, the Cancel button, `Escape`, clicking outside and the timeout are one behaviour: abort the poll, close, reject the promise with `AbortError`. |
 | **No ZOREAL ID yet** | A footer says the same code also installs the app. Without it the panel reads as "scan this with something I do not have", and the flow dead-ends at the one moment it can still be recovered. |
-| **Themes** | `theme: 'auto'` (default) follows `prefers-color-scheme`; `'light'` and `'dark'` force it. The QR well stays white in dark mode on purpose — an inverted QR fails on a good number of phone cameras. |
+| **Themes** | `theme: 'auto'` (default) follows `prefers-color-scheme`; `'light'` and `'dark'` force it. In dark mode the code is drawn light on the dark surface, the mark included, and the light around it runs brighter and wider. |
 | **Language** | Ships its own copy in 39 locales. Pass `locale` and the modal matches the page it opened on; omit it and it follows the browser's preference list, English as the floor. Arabic, Hebrew and Urdu flip the dialog to RTL. |
 | **Accessibility** | `role="dialog"`, `aria-modal`, labelled by its title, focus moved in on open, scroll locked, visible focus rings, and a `prefers-reduced-motion` fallback. |
 

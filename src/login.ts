@@ -20,6 +20,7 @@ import {
   pollUntilApproved,
   startPairing,
 } from './pairing';
+import { resolveIntent } from './intent';
 import { mountPairingModal, type PairingModalHandle } from './modal';
 import { challengeS256, generateState, generateVerifier } from './pkce';
 import { DEFAULT_ISSUER, DEFAULT_QR_REFRESH_SECONDS } from './wire';
@@ -64,6 +65,7 @@ export function startLogin(
   // wait for.
   const useAppLink =
     options.display === 'link' || (options.display !== 'qr' && isMobileUserAgent());
+  const intent = resolveIntent(options.intent, options.scope, options.acr_values);
 
   const surface: {
     requestId?: string;
@@ -155,6 +157,7 @@ export function startLogin(
           qrUrl: surface.qrUrl,
           qrRefreshSeconds,
           appLink: useAppLink,
+          intent,
           cancel,
         });
 
@@ -172,6 +175,7 @@ export function startLogin(
         if ((options.pairingUI ?? 'modal') === 'modal' && !useAppLink) {
           modal = mountPairingModal(initial, {
             onCancel: cancel,
+            intent,
             locale: options.locale,
             theme: options.theme,
             timeoutMs: options.pairingTimeoutMs,
