@@ -82,26 +82,54 @@ the issuer is `https://id.zoreal.com` in every environment.
 ## Quick start: auth-code (email and name, needs your backend)
 
 ```ts
-import { startLogin } from '@zoreal/oauth2-js';
+import { startLogin, resumeLogin } from '@zoreal/oauth2-js';
 
-// On the user's click, never on page load:
-const handle = startLogin({
-  flow: 'auth-code',
-  clientId: 'ast_your_asset_id',
-  scope: 'openid email profile.name',
-  // The QR, its live status, the countdown and the cancel wiring are drawn
-  // by this package. Nothing to render, nothing to translate.
-});
+const button = document.querySelector<HTMLButtonElement>('#zoreal')!;
 
-const { code, code_verifier, nonce } = await handle.promise;
-// Send ALL THREE to your backend over TLS. Your backend calls POST /token
-// with the code, the verifier and its client authentication, verifies the
-// ID token (including the nonce), then reads email and name from /userinfo.
-await fetch('/api/auth/zoreal', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ code, code_verifier, nonce }),
-});
+// Everything the flow can end in, one place: success posts the three values
+// to your backend, and every other outcome readies the button again.
+async function finish(promise: Promise<{ code: string; code_verifier: string; nonce: string }>) {
+  try {
+    const { code, code_verifier, nonce } = await promise;
+    // Send ALL THREE to your backend over TLS. Your backend calls POST /token
+    // with the code, the verifier and its client authentication, verifies the
+    // ID token (including the nonce), then reads email and name from /userinfo.
+    await fetch('/api/auth/zoreal', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, code_verifier, nonce }),
+    });
+  } catch (e) {
+    // AbortError: the person closed the dialog. FlowAbandonedError: declined or
+    // expired. Neither is an error to surface; see the complete example.
+  } finally {
+    button.disabled = false;
+  }
+}
+
+// On the user's click, from the click handler itself, never on page load. On
+// a phone this tap is a navigation to the provider, which opens the ZOREAL ID
+// app; nothing may be awaited before startLogin runs.
+button.onclick = () => {
+  button.disabled = true;
+  void finish(
+    startLogin({
+      flow: 'auth-code',
+      clientId: 'ast_your_asset_id',
+      scope: 'openid email profile.name',
+      // The QR, its live status, the countdown and the cancel wiring are drawn
+      // by this package. Nothing to render, nothing to translate.
+    }).promise
+  );
+};
+
+// On every load of this page: after the approval in the app, the app reopens
+// this page and the sign-in is finished here. null when this load is not one.
+const returned = resumeLogin({ clientId: 'ast_your_asset_id' });
+if (returned) {
+  button.disabled = true;
+  void finish(returned.promise as Promise<{ code: string; code_verifier: string; nonce: string }>);
+}
 ```
 
 ## Quick start: browser-direct (no backend, pseudonymous)
@@ -119,9 +147,10 @@ const { credential } = await handle.promise;
 ```
 
 On desktop this package opens the [pairing modal](#the-pairing-modal); the user
-scans the QR with their phone and approves in the ZOREAL ID app. On a phone it
-skips the QR and opens the app directly through the pairing link. Either way
-your page just awaits `handle.promise`.
+scans the QR with their phone and approves in the ZOREAL ID app. On a phone the
+tap itself navigates to the provider, which opens the app, and after the
+approval the app reopens your page, where `resumeLogin()` finishes the sign-in.
+Either way your page awaits a promise.
 
 ## The pairing modal
 
@@ -452,10 +481,13 @@ error is an `OAuthFlowError`, or the rare `FlowAbandonedError` of type `unknown`
 
 ## A complete example
 
-A whole "Continue with ZOREAL" control in plain TypeScript — no framework — that
-runs the auth-code flow, shows the pairing UI from `onState`, and hands
-`{ code, code_verifier, nonce }` to your backend. **Your backend is where the
-login is actually verified**: it exchanges the code at `/token` with its client
+A whole "Continue with ZOREAL" control in plain TypeScript, no framework, the
+shape a production auth-code integration takes: the button, busy from the tap
+until the flow ends, this package's pairing modal on a computer and the app
+hand-over on a phone, `{ code, code_verifier, nonce }` to your backend, the
+human outcomes treated as the non-events they are, and the return from the app
+on a phone finished by `resumeLogin` on load. **Your backend is where the login
+is actually verified**: it exchanges the code at `/token` with its client
 authentication, checks the ID token's signature, `iss`, `aud`, `exp` and
 `nonce` against the JWKS, and reads `/userinfo`. Nothing the browser resolves is
 trusted until it has.
@@ -463,63 +495,32 @@ trusted until it has.
 ```ts
 import {
   startLogin,
+  resumeLogin,
   OAuthFlowError,
   FlowAbandonedError,
-  type PairingState,
+  type ZorealCodeResponse,
 } from '@zoreal/oauth2-js';
+
+const CLIENT_ID = 'ast_your_asset_id';
 
 export function mountZorealButton(root: HTMLElement) {
   const button = document.createElement('button');
+  button.type = 'button';
   button.textContent = 'Continue with ZOREAL';
-  const panel = document.createElement('div'); // holds the pairing UI
-  root.append(button, panel);
+  const note = document.createElement('p');
+  note.setAttribute('role', 'status');
+  root.append(button, note);
 
-  let handle: ReturnType<typeof startLogin> | null = null;
-
-  const renderPairing = (s: PairingState) => {
-    panel.replaceChildren();
-    if (s.appLink) {
-      panel.textContent = 'Opening the ZOREAL ID app…';
-      return;
-    }
-    if (s.qrUrl) {
-      const img = document.createElement('img');
-      // Provider-served, and a new frame every few seconds: never draw your
-      // own QR of pairUrl, and never keep the first URL. A real UI keeps one
-      // <img> and assigns src, rather than rebuilding it as this sketch does.
-      img.src = s.qrUrl;
-      img.alt = 'Scan with the ZOREAL ID app';
-      panel.append(img);
-    }
-    const status = document.createElement('p');
-    status.textContent = s.status; // pending | claimed | approved | ...
-    panel.append(status);
-    if (s.cancel) {
-      const cancel = document.createElement('button');
-      cancel.textContent = 'Cancel';
-      cancel.onclick = () => s.cancel!();
-      panel.append(cancel);
-    }
+  const busy = (on: boolean) => {
+    button.disabled = on;
+    button.setAttribute('aria-busy', String(on));
   };
 
-  button.onclick = async () => {
-    handle?.cancel(); // one flow at a time
-    handle = startLogin({
-      flow: 'auth-code',
-      clientId: 'ast_your_asset_id',
-      scope: 'openid email profile.name',
-      // This example draws its own panel, so it opts out of the built-in
-      // modal. Drop these two lines and delete renderPairing to use it.
-      pairingUI: 'none',
-      onState: renderPairing,
-    });
-
+  const finish = async (promise: Promise<ZorealCodeResponse>) => {
     try {
-      const { code, code_verifier, nonce } = await handle.promise;
-      panel.replaceChildren();
-
+      const { code, code_verifier, nonce } = await promise;
       // Post all three to YOUR backend over TLS. Protect this route with your
-      // framework's normal CSRF / same-origin controls — the ZOREAL nonce
+      // framework's normal CSRF / same-origin controls: the ZOREAL nonce
       // protects the token, not your endpoint. The backend verifies before it
       // trusts, then establishes the session.
       const res = await fetch('/api/auth/zoreal', {
@@ -530,27 +531,54 @@ export function mountZorealButton(root: HTMLElement) {
       if (!res.ok) throw new Error('backend rejected the login');
       window.location.assign('/dashboard');
     } catch (e) {
-      panel.replaceChildren();
       if (e instanceof DOMException && e.name === 'AbortError') {
-        return; // the user closed the dialog; say nothing
+        note.textContent = ''; // the person closed the dialog; say nothing
+      } else if (e instanceof FlowAbandonedError && e.reason.type === 'request_denied') {
+        note.textContent = 'Login declined. Try again when you are ready.'; // a human outcome
+      } else if (e instanceof FlowAbandonedError && e.reason.type === 'request_expired') {
+        note.textContent = 'That took too long. Try again.';
+      } else if (e instanceof OAuthFlowError) {
+        note.textContent = e.description ?? e.error; // provider's words, verbatim
+      } else {
+        note.textContent = 'Something went wrong. Try again.';
       }
-      if (e instanceof FlowAbandonedError && e.reason.type === 'request_denied') {
-        panel.textContent = 'Login declined. Try again when you are ready.';
-        return; // a human outcome, not an error to alarm on
-      }
-      if (e instanceof FlowAbandonedError && e.reason.type === 'request_expired') {
-        panel.textContent = 'That took too long. Try again.';
-        return;
-      }
-      if (e instanceof OAuthFlowError) {
-        panel.textContent = e.description ?? e.error; // provider's words, verbatim
-        return;
-      }
-      panel.textContent = 'Something went wrong. Try again.';
+    } finally {
+      busy(false);
     }
   };
+
+  let handle: ReturnType<typeof startLogin> | null = null;
+
+  // From the click handler itself, with nothing awaited first: on a phone this
+  // tap is a navigation to the provider, which opens the ZOREAL ID app. On a
+  // computer this package draws the pairing modal; nothing here renders a QR.
+  button.onclick = () => {
+    if (button.disabled) return;
+    handle?.cancel(); // one flow at a time
+    busy(true);
+    note.textContent = '';
+    handle = startLogin({
+      flow: 'auth-code',
+      clientId: CLIENT_ID,
+      scope: 'openid email profile.name',
+    });
+    void finish(handle.promise);
+  };
+
+  // The return. After the approval in the ZOREAL ID app on a phone, the app
+  // reopens this page with the pairing named in the fragment; the sign-in is
+  // finished here. null at once when this page load is not a return.
+  const returned = resumeLogin({ clientId: CLIENT_ID });
+  if (returned) {
+    busy(true);
+    void finish(returned.promise as Promise<ZorealCodeResponse>);
+  }
 }
 ```
+
+To draw the pairing UI yourself instead of using the modal, pass
+`pairingUI: 'none'` and render from `onState`; see
+[Rendering it yourself](#rendering-it-yourself).
 
 For the no-backend case, swap `flow: 'auth-code'` for the default browser-direct
 flow: `handle.promise` then resolves `{ credential }`, an ID token carrying only
