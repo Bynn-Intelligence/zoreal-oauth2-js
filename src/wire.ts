@@ -57,7 +57,7 @@
  */
 
 export const WIRE_VERSION = 1;
-export const SDK_VERSION = '0.1.12';
+export const SDK_VERSION = '0.1.13';
 export const SDK_NAME = '@zoreal/oauth2-js';
 export const DEFAULT_ISSUER = 'https://id.zoreal.com';
 
