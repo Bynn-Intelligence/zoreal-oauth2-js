@@ -21,6 +21,7 @@ import {
   sameDeviceStartUrl,
   startPairing,
 } from './pairing';
+import { holdBusy } from './busy';
 import { resolveIntent } from './intent';
 import {
   forgetReturnFlow,
@@ -101,10 +102,14 @@ export function startLogin(
   // code is spent and a moving image would only distract.
   let stopRefresh: () => void = () => {};
   controller.signal.addEventListener('abort', () => stopRefresh());
+  // The site's control, held busy for the whole login and let go with
+  // everything else on every exit.
+  const releaseControl = options.control ? holdBusy(options.control) : () => {};
   const teardown = () => {
     stopRefresh();
     modal?.close();
     modal = null;
+    releaseControl();
   };
 
   const run = async (): Promise<ZorealCredentialResponse | ZorealCodeResponse> => {
@@ -419,7 +424,7 @@ export function startLogin(
  * from the address bar as it is read.
  */
 export function resumeLogin(
-  options: Pick<StartLoginOptions, 'clientId' | 'issuer' | 'onState'>
+  options: Pick<StartLoginOptions, 'clientId' | 'issuer' | 'onState' | 'control'>
 ): LoginHandle<ZorealCredentialResponse | ZorealCodeResponse> | null {
   const id = pendingReturnId();
   if (!id) return null;
@@ -429,6 +434,7 @@ export function resumeLogin(
 
   const issuer = options.issuer ?? saved.issuer;
   const controller = new AbortController();
+  const releaseControl = options.control ? holdBusy(options.control) : () => {};
   const promise = (async (): Promise<ZorealCredentialResponse | ZorealCodeResponse> => {
     const code = await pollUntilApproved(
       issuer,
@@ -463,6 +469,7 @@ export function resumeLogin(
     markReturnDone(id);
     return response;
   })();
+  promise.then(releaseControl, releaseControl);
   // A rejection is the caller's to observe on the promise; it must not also
   // surface as an unhandled rejection when they never attach to it.
   promise.catch(() => {});

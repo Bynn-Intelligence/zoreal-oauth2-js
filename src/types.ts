@@ -170,6 +170,13 @@ export interface StartLoginOptions {
    * sign-in. See LoginIntent for what is inferred when this is omitted.
    */
   intent?: LoginIntent;
+  /**
+   * The control the person used to start this login, held busy with the
+   * pairing modal's light round it until the login ends, and let go on
+   * every outcome. Pass the button from your click handler. Nothing else is
+   * needed: no wrapper, no busy state of your own.
+   */
+  control?: HTMLElement;
   /** Sent to the provider so the pairing surface speaks the visitor's language. */
   locale?: string;
   /** Called on each pairing state change. Drive your UI from this. */

@@ -448,6 +448,16 @@ export const CSS = `
   transition: opacity 200ms ease-out;
 }
 .${PREFIX}-ring[data-busy="true"] > .${PREFIX}-ring-svg { opacity: 1; }
+/* The same light as an overlay in the document body, placed over a site's
+   own control by the package itself (busy.ts): nothing of the site's
+   markup or CSS is touched, and neither an ancestor's overflow nor a
+   selector on the control's parent is affected. */
+.${PREFIX}-ring-overlay {
+  position: fixed;
+  display: block;
+  z-index: 2147483000;
+  pointer-events: none;
+}
 .${PREFIX}-ring-svg rect {
   --zrl-l: var(--zrl-ring-len, 600px);
   x: 2px;

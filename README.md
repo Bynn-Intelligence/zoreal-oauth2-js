@@ -102,21 +102,21 @@ async function finish(promise: Promise<{ code: string; code_verifier: string; no
   } catch (e) {
     // AbortError: the person closed the dialog. FlowAbandonedError: declined or
     // expired. Neither is an error to surface; see the complete example.
-  } finally {
-    button.disabled = false;
   }
 }
 
 // On the user's click, from the click handler itself, never on page load. On
 // a phone this tap is a navigation to the provider, which opens the ZOREAL ID
-// app; nothing may be awaited before startLogin runs.
+// app; nothing may be awaited before startLogin runs. `control` is the button:
+// the package disables it, runs the pairing modal's light round it until the
+// login ends, and lets it go on every outcome. Nothing else to do.
 button.onclick = () => {
-  button.disabled = true;
   void finish(
     startLogin({
       flow: 'auth-code',
       clientId: 'ast_your_asset_id',
       scope: 'openid email profile.name',
+      control: button,
       // The QR, its live status, the countdown and the cancel wiring are drawn
       // by this package. Nothing to render, nothing to translate.
     }).promise
@@ -125,11 +125,8 @@ button.onclick = () => {
 
 // On every load of this page: after the approval in the app, the app reopens
 // this page and the sign-in is finished here. null when this load is not one.
-const returned = resumeLogin({ clientId: 'ast_your_asset_id' });
-if (returned) {
-  button.disabled = true;
-  void finish(returned.promise as Promise<{ code: string; code_verifier: string; nonce: string }>);
-}
+const returned = resumeLogin({ clientId: 'ast_your_asset_id', control: button });
+if (returned) void finish(returned.promise as Promise<{ code: string; code_verifier: string; nonce: string }>);
 ```
 
 ## Quick start: browser-direct (no backend, pseudonymous)
@@ -169,7 +166,7 @@ is nothing to configure and nothing to draw.
 
 | | |
 | --- | --- |
-| **Mobile** | No QR and no modal. The tap itself is a navigation: `startLogin` sends the tab to the provider's `/pair/start` with the pairing's parameters, synchronously, and the provider answers with a redirect to the pairing's universal link, which the ZOREAL ID app claims while the page stays put and polls. A browser hands a link to an app only inside a navigation the person began, which is why nothing is fetched first. With no app installed the same redirect lands on the page that installs it. Call `startLogin` from the click handler itself, disable the button, and show it working until the promise settles. Once the holder has approved, the app reopens your page with the pairing named in the fragment; call `resumeLogin({ clientId })` on every page load where `startLogin` can be called, and it finishes the sign-in there, resolving the way `startLogin` would have, or answers `null` at once when the page load is not a return. The tab that was left behind keeps polling and stands down when the returned page finishes first. Force one or the other with `display: 'qr'` / `'link'`. The choice is made before the pairing is created, because the provider binds the surface there: a link-mode pairing is claimed only by the app that opened that exact link, and has no QR at all. |
+| **Mobile** | No QR and no modal. The tap itself is a navigation: `startLogin` sends the tab to the provider's `/pair/start` with the pairing's parameters, synchronously, and the provider answers with a redirect to the pairing's universal link, which the ZOREAL ID app claims while the page stays put and polls. A browser hands a link to an app only inside a navigation the person began, which is why nothing is fetched first. With no app installed the same redirect lands on the page that installs it. Call `startLogin` from the click handler itself and pass the button as `control`: the package disables it, runs the pairing modal's light round it until the login ends, and lets it go on every outcome. Once the holder has approved, the app reopens your page with the pairing named in the fragment; call `resumeLogin({ clientId })` on every page load where `startLogin` can be called, and it finishes the sign-in there, resolving the way `startLogin` would have, or answers `null` at once when the page load is not a return. The tab that was left behind keeps polling and stands down when the returned page finishes first. Force one or the other with `display: 'qr'` / `'link'`. The choice is made before the pairing is created, because the provider binds the surface there: a link-mode pairing is claimed only by the app that opened that exact link, and has no QR at all. |
 | **Live status** | Copy and title follow the pairing: waiting for a scan, then waiting for approval once the code is claimed (the spent QR blurs out behind a phone glyph). |
 | **Title** | Says what the scan is for, inferred from the request: "Scan to sign in" for `openid`, `email` and `profile.name`; "Scan to verify your identity" once a document attribute such as `zoreal.age` or `profile.birthdate` is requested; "Scan to prove you are a real human" for `openid` alone with `acr_values: 'zoreal.live'`. Override with `intent`, one of `'sign-in'`, `'identify'`, `'presence'`, when the scope does not say. |
 | **Countdown** | Counts down to expiry, turning amber under 20s. Reads the clock each tick rather than decrementing, so a backgrounded tab comes back honest. |
@@ -511,11 +508,6 @@ export function mountZorealButton(root: HTMLElement) {
   note.setAttribute('role', 'status');
   root.append(button, note);
 
-  const busy = (on: boolean) => {
-    button.disabled = on;
-    button.setAttribute('aria-busy', String(on));
-  };
-
   const finish = async (promise: Promise<ZorealCodeResponse>) => {
     try {
       const { code, code_verifier, nonce } = await promise;
@@ -542,8 +534,6 @@ export function mountZorealButton(root: HTMLElement) {
       } else {
         note.textContent = 'Something went wrong. Try again.';
       }
-    } finally {
-      busy(false);
     }
   };
 
@@ -552,15 +542,17 @@ export function mountZorealButton(root: HTMLElement) {
   // From the click handler itself, with nothing awaited first: on a phone this
   // tap is a navigation to the provider, which opens the ZOREAL ID app. On a
   // computer this package draws the pairing modal; nothing here renders a QR.
+  // `control` is the button: the package disables it, runs the pairing
+  // modal's light round it until the login ends, and lets it go on every
+  // outcome.
   button.onclick = () => {
-    if (button.disabled) return;
     handle?.cancel(); // one flow at a time
-    busy(true);
     note.textContent = '';
     handle = startLogin({
       flow: 'auth-code',
       clientId: CLIENT_ID,
       scope: 'openid email profile.name',
+      control: button,
     });
     void finish(handle.promise);
   };
@@ -568,11 +560,8 @@ export function mountZorealButton(root: HTMLElement) {
   // The return. After the approval in the ZOREAL ID app on a phone, the app
   // reopens this page with the pairing named in the fragment; the sign-in is
   // finished here. null at once when this page load is not a return.
-  const returned = resumeLogin({ clientId: CLIENT_ID });
-  if (returned) {
-    busy(true);
-    void finish(returned.promise as Promise<ZorealCodeResponse>);
-  }
+  const returned = resumeLogin({ clientId: CLIENT_ID, control: button });
+  if (returned) void finish(returned.promise as Promise<ZorealCodeResponse>);
 }
 ```
 
