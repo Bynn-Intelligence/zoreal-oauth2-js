@@ -422,10 +422,15 @@ export const CSS = `
    sides and lights two edges at once near the ends. So here the light is a
    dash on an SVG outline, which moves at one speed the whole way round
    whatever the shape, drawn with the well's tokens: its colour and head
-   tint, its line width, its halo, its four second lap. pathLength makes the
-   outline 100 units long, so every dash and offset is a percentage of the
-   way round; the three layers share one head at 30 and differ in length
-   and brightness, which is the comet's tail. Shown only while busy. */
+   tint, its line width, its halo, its four second lap. The outline's length
+   is measured by the component and set as --zrl-ring-len, and every dash
+   and offset is a fraction of it, because pathLength does not scale dash
+   values given from CSS. A stroke cannot fade along its length, so the tail
+   is a stack of dashes sharing one head, each shorter and more opaque than
+   the one under it, with opacities chosen so the stack composes to a
+   straight fade from the head to nothing three tenths of the way back; the
+   component sets each layer's length, offset and opacity. Shown only while
+   busy. */
 .${PREFIX}-ring {
   position: relative;
   display: inline-flex;
@@ -444,6 +449,7 @@ export const CSS = `
 }
 .${PREFIX}-ring[data-busy="true"] > .${PREFIX}-ring-svg { opacity: 1; }
 .${PREFIX}-ring-svg rect {
+  --zrl-l: var(--zrl-ring-len, 600px);
   x: 2px;
   y: 2px;
   width: calc(100% - 4px);
@@ -452,23 +458,18 @@ export const CSS = `
   stroke: var(--zrl-beam);
   stroke-width: var(--zrl-beam-line);
   stroke-linecap: round;
+  stroke-dashoffset: var(--zrl-s, 0px);
   animation: ${PREFIX}-dash var(--zrl-beam-time) linear infinite;
 }
-.${PREFIX}-ring-tail { stroke-dasharray: 30 70; stroke-dashoffset: 0; opacity: 0.35; }
-.${PREFIX}-ring-body { stroke-dasharray: 16 84; stroke-dashoffset: -14; opacity: 0.8; }
-.${PREFIX}-ring-head { stroke-dasharray: 5 95; stroke-dashoffset: -25; stroke: var(--zrl-beam-head); }
+.${PREFIX}-ring-head { stroke: var(--zrl-beam-head); }
 .${PREFIX}-ring-halo {
-  stroke-dasharray: 30 70;
-  stroke-dashoffset: 0;
   stroke-width: calc(var(--zrl-glow-core) * 2 + var(--zrl-beam-line));
-  opacity: calc(var(--zrl-glow-opacity) * 0.5);
   filter: blur(var(--zrl-glow-blur));
 }
 @keyframes ${PREFIX}-dash {
-  to { stroke-dashoffset: calc(var(--zrl-dash-start, 0) - 100); }
+  from { stroke-dashoffset: var(--zrl-s, 0px); }
+  to { stroke-dashoffset: calc(var(--zrl-s, 0px) - var(--zrl-l)); }
 }
-.${PREFIX}-ring-body { --zrl-dash-start: -14; }
-.${PREFIX}-ring-head { --zrl-dash-start: -25; }
 @media (prefers-reduced-motion: reduce) {
   .${PREFIX}-ring-svg rect { animation: none; stroke-dasharray: none; opacity: 0.45; }
   .${PREFIX}-ring-halo, .${PREFIX}-ring-head { display: none; }
