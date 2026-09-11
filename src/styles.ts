@@ -44,8 +44,20 @@ const LIGHT = `
   --zrl-accent-ink: #04698a;
   --zrl-urgent: #b4761a;
   --zrl-qr-bg: #ffffff;
+  --zrl-qr-filter: none;
+  --zrl-qr-spent-filter: blur(3px);
+  --zrl-qr-blend: normal;
   --zrl-shadow: 0 1px 2px rgba(16, 18, 27, 0.06), 0 20px 50px -12px rgba(16, 18, 27, 0.3);
   --zrl-ring: rgba(16, 18, 27, 0.07);
+  /* The light on the QR well's edge. Brand blue on both grounds, a lighter
+     tint at the head; only its strength is themed, see the dark block. */
+  --zrl-beam: #00b4d9;
+  --zrl-beam-head: #7fe0f4;
+  --zrl-beam-line: 2px;
+  --zrl-glow-core: 4px;
+  --zrl-glow-reach: 24px;
+  --zrl-glow-blur: 8px;
+  --zrl-glow-opacity: 0.6;
 `;
 
 const DARK = `
@@ -61,12 +73,24 @@ const DARK = `
   --zrl-accent-soft: #0d3b47;
   --zrl-accent-ink: #7fdcf0;
   --zrl-urgent: #e0a952;
-  /* The QR well stays white in dark mode on purpose: a scanner needs the
-     quiet-zone contrast, and an inverted QR fails on a good number of phone
-     cameras. It reads as a deliberate light panel, not a theming miss. */
-  --zrl-qr-bg: #ffffff;
+  /* The code is drawn light on the dark surface: the panel is transparent
+     and the image is inverted and screened, so only the modules and the
+     mark show. */
+  --zrl-qr-bg: transparent;
+  --zrl-qr-filter: invert(1);
+  --zrl-qr-spent-filter: invert(1) blur(3px);
+  --zrl-qr-blend: screen;
   --zrl-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 20px 50px -12px rgba(0, 0, 0, 0.65);
   --zrl-ring: rgba(255, 255, 255, 0.1);
+  /* A glow that reads on a white card disappears on a dark one: the light
+     here is brighter and wider, and its halo reaches further out. */
+  --zrl-beam: #22c8ec;
+  --zrl-beam-head: #c2f3fc;
+  --zrl-beam-line: 3px;
+  --zrl-glow-core: 6px;
+  --zrl-glow-reach: 32px;
+  --zrl-glow-blur: 10px;
+  --zrl-glow-opacity: 0.85;
 `;
 
 export const CSS = `
@@ -139,16 +163,10 @@ export const CSS = `
   border: 1px solid var(--zrl-line);
   border-radius: var(--zrl-radius);
   background: var(--zrl-qr-bg);
-  /* The light on the edge takes its shape and colour from here. The colour
-     is fixed, not themed: the brand blue on both grounds, a lighter tint of
-     it at the head, no other hue. */
+  /* The light on the edge takes its shape from here and its colour and
+     strength from the theme tokens above. One lap in 4s on every tier. */
   --zrl-radius: 16px;
-  --zrl-beam: #00b4d9;
-  --zrl-beam-head: #7fe0f4;
-  --zrl-beam-size: 100px;
   --zrl-beam-time: 4s;
-  --zrl-glow-reach: 20px;
-  --zrl-glow-core: 3px;
 }
 
 /* The light on the well's edge: a short comet running along the border, with
@@ -161,7 +179,7 @@ export const CSS = `
    before 120 and Safari before 15.4; the unprefixed one, declared after it,
    wins everywhere else.
 
-   qr-beam keeps a 1px ring on the border line: the comet itself.
+   qr-beam keeps a thin ring on the border line: the comet itself.
    qr-beam-glow is the glow: a wide band outside the well that blurs whatever
    is inside it, and inside it qr-beam-glow-band keeps a 3px ring with a
    second copy of the comet. The blur has to sit on the parent because a
@@ -176,9 +194,9 @@ export const CSS = `
 .${PREFIX}-qr-beam-glow,
 .${PREFIX}-qr-beam-glow-band {
   position: absolute;
-  inset: -1px;
-  border: 1px solid transparent;
-  border-radius: var(--zrl-radius);
+  inset: calc(0px - var(--zrl-beam-line));
+  border: var(--zrl-beam-line) solid transparent;
+  border-radius: calc(var(--zrl-radius) - 1px + var(--zrl-beam-line));
   pointer-events: none;
   -webkit-mask: linear-gradient(transparent, transparent), linear-gradient(#fff, #fff);
   -webkit-mask-clip: padding-box, border-box;
@@ -191,8 +209,9 @@ export const CSS = `
   inset: calc(0px - var(--zrl-glow-reach));
   border-width: var(--zrl-glow-reach);
   border-radius: calc(var(--zrl-radius) - 1px + var(--zrl-glow-reach));
-  filter: blur(6px);
-  opacity: 0.7;
+  filter: blur(var(--zrl-glow-blur));
+  opacity: var(--zrl-glow-opacity);
+  will-change: filter;
 }
 .${PREFIX}-qr-beam-glow-band {
   inset: calc(0px - var(--zrl-glow-core));
@@ -215,20 +234,24 @@ export const CSS = `
   transition: opacity 400ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 
-/* The moving light. Declared bottom-up: the transform fallback here, and each
-   @supports block further down replaces it where the browser allows. */
+/* The moving light: an oversized square carrying a conic sweep, rotated
+   whole. A transform animation runs on the compositor, so the light keeps
+   moving while the page is busy; animating the gradient angle instead
+   repaints every frame on the main thread and stutters. */
 .${PREFIX}-qr-beam::after,
 .${PREFIX}-qr-beam-glow-band::after {
   content: '';
   position: absolute;
   inset: -50%;
   background: conic-gradient(
-    from var(--zrl-angle, 0deg),
-    transparent 0deg 245deg,
-    var(--zrl-beam) 332deg 346deg,
+    from 0deg,
+    transparent 0deg 220deg,
+    var(--zrl-beam) 330deg,
+    var(--zrl-beam-head) 348deg,
     transparent 356deg 360deg
   );
-  animation: ${PREFIX}-orbit 3s linear infinite;
+  animation: ${PREFIX}-orbit var(--zrl-beam-time) linear infinite;
+  will-change: transform;
   transition: opacity 400ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 
@@ -248,6 +271,8 @@ export const CSS = `
   width: 100%;
   height: 100%;
   border-radius: 8px;
+  filter: var(--zrl-qr-filter);
+  mix-blend-mode: var(--zrl-qr-blend);
   transition: filter 300ms cubic-bezier(0.23, 1, 0.32, 1),
     opacity 300ms cubic-bezier(0.23, 1, 0.32, 1),
     transform 300ms cubic-bezier(0.23, 1, 0.32, 1);
@@ -256,7 +281,7 @@ export const CSS = `
 /* Once the code is claimed the QR is spent. Blurring it out rather than
    swapping it keeps one object on screen through the state change, so the eye
    reads a transformation instead of two things trading places. */
-.${PREFIX}-qr[data-spent="true"] { opacity: 0.2; filter: blur(3px); transform: scale(0.96); }
+.${PREFIX}-qr[data-spent="true"] { opacity: 0.2; filter: var(--zrl-qr-spent-filter); transform: scale(0.96); }
 
 .${PREFIX}-qr-overlay {
   position: absolute;
@@ -385,53 +410,7 @@ export const CSS = `
   70%, 100% { transform: scale(2.6); opacity: 0 }
 }
 
-/* Three ways to move the light, one look at rest.
-   Where offset-path takes a rect() (Chrome 116, Firefox 122, Safari 18) the
-   comet rides the edge. Before that, a conic gradient turns inside the same
-   masks instead: on a registered custom property where @property exists, and
-   by rotating an oversized square where it does not, since an untyped custom
-   property cannot interpolate and the light would snap once a cycle.
-   There is no direct query for @property support. transition-behavior
-   shipped after it in every engine (Chrome 117 vs 85, Firefox 129 vs 128,
-   Safari 17.4 vs 16.4), so it stands in: a yes is never wrong, and a no only
-   sends a capable browser down the transform tier, which looks the same.
-   inherits: false so the angle stays on the element that animates it and
-   never reaches the host page or the well. */
-@property --zrl-angle {
-  syntax: '<angle>';
-  inherits: false;
-  initial-value: 0deg;
-}
 @keyframes ${PREFIX}-orbit { to { transform: rotate(360deg) } }
-@keyframes ${PREFIX}-orbit-angle { to { --zrl-angle: 360deg } }
-@keyframes ${PREFIX}-beam { to { offset-distance: 100% } }
-@supports (transition-behavior: allow-discrete) {
-  .${PREFIX}-qr-beam::after {
-    inset: -1px;
-    animation-name: ${PREFIX}-orbit-angle;
-  }
-  .${PREFIX}-qr-beam-glow-band::after {
-    inset: calc(0px - var(--zrl-glow-core));
-    animation-name: ${PREFIX}-orbit-angle;
-  }
-}
-/* The comet: a square that rides the well's edge on a rounded-rect path, its
-   anchor a little ahead of centre, turned to face the way it travels, and
-   masked down to what its overlay allows. The gradient runs against the
-   direction of travel: a light head, the blue body, nothing behind. One lap
-   in 4s, linear: continuous motion has no ease. */
-@supports (offset-path: rect(0 auto auto 0)) {
-  .${PREFIX}-qr-beam::after,
-  .${PREFIX}-qr-beam-glow-band::after {
-    inset: auto;
-    width: var(--zrl-beam-size);
-    height: var(--zrl-beam-size);
-    background: linear-gradient(to left, var(--zrl-beam-head), var(--zrl-beam), transparent);
-    offset-path: rect(0 auto auto 0 round calc(var(--zrl-radius) - 1px));
-    offset-anchor: 60% 50%;
-    animation: ${PREFIX}-beam var(--zrl-beam-time) linear infinite;
-  }
-}
 
 @media (prefers-reduced-motion: reduce) {
   .${PREFIX}-scrim,
