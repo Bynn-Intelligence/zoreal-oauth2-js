@@ -18,11 +18,18 @@ import {
   exchangeCode,
   isMobileUserAgent,
   pollUntilApproved,
+  sameDeviceStartUrl,
   startPairing,
 } from './pairing';
 import { resolveIntent } from './intent';
 import { mountPairingModal, type PairingModalHandle } from './modal';
-import { challengeS256, generateState, generateVerifier } from './pkce';
+import {
+  challengeS256,
+  challengeS256Sync,
+  generateRequestId,
+  generateState,
+  generateVerifier,
+} from './pkce';
 import { DEFAULT_ISSUER, DEFAULT_QR_REFRESH_SECONDS } from './wire';
 import type {
   AcrValue,
@@ -96,6 +103,59 @@ export function startLogin(
     const nonce = generateState();
 
     try {
+      let code: string;
+      let selectBy: SelectBy = 'device';
+
+      if (useAppLink && typeof window !== 'undefined') {
+        // THE TAP IS THE NAVIGATION. Nothing is awaited between the caller's
+        // click and the assignment below: a browser hands a universal link to
+        // an app only inside a navigation the person began, and an await here
+        // would put the navigation outside it, where the link loads as a web
+        // page instead (see sameDeviceStartUrl). The provider creates the
+        // pairing and redirects to the link; the page stays and polls the
+        // token it chose, tolerating "no such pairing" for as long as the
+        // provider may still be answering the navigation. No modal: there is
+        // no code to scan and the page is the button that was tapped.
+        const requestId = generateRequestId();
+        const startUrl = sameDeviceStartUrl(issuer, {
+          client_id: options.clientId,
+          scope: options.scope ?? 'openid',
+          state,
+          nonce,
+          code_challenge: challengeS256Sync(verifier),
+          redirect_uri:
+            flow === 'auth-code' ? (options as AuthCodeLoginOptions).redirect_uri : undefined,
+          acr_values: Array.isArray(options.acr_values)
+            ? options.acr_values.join(' ')
+            : options.acr_values,
+          max_age: options.max_age,
+          prompt: options.prompt,
+          locale: options.locale,
+          request_id: requestId,
+          origin: window.location.origin,
+        });
+        selectBy = 'app_link';
+        surface.requestId = requestId;
+        surface.pairUrl = startUrl;
+        surface.appLink = true;
+        const withSurface = (s: PairingState): PairingState => ({
+          ...s,
+          pairUrl: startUrl,
+          appLink: true,
+          intent,
+          cancel,
+        });
+        options.onState?.(withSurface({ status: 'pending' }));
+        window.location.assign(startUrl);
+
+        code = await pollUntilApproved(
+          issuer,
+          requestId,
+          (s) => options.onState?.(withSurface(s)),
+          controller.signal,
+          { tolerateUnknownUntil: Date.now() + 15_000 }
+        );
+      } else {
       const started = await startPairing(
         issuer,
         {
@@ -112,20 +172,17 @@ export function startLogin(
           max_age: options.max_age,
           prompt: options.prompt,
           locale: options.locale,
-          display: useAppLink ? 'link' : 'qr',
+          display: 'qr',
         },
         controller.signal
       );
-
-      let code: string;
-      let selectBy: SelectBy = 'device';
 
       if ('code' in started) {
         // prompt=none resolved silently: consented sector, live session.
         code = started.code;
         selectBy = 'session';
       } else {
-        selectBy = useAppLink ? 'app_link' : 'qr';
+        selectBy = 'qr';
 
         const requestId = started.request_id;
         const qrBase = `${issuer}/pair/${encodeURIComponent(requestId)}/qr.svg`;
@@ -135,7 +192,7 @@ export function startLogin(
         // makes a screenshot of the code useless. This package only has to
         // re-fetch it on time. Nothing to move on an app-link hand-off, and
         // nothing to move when the provider says it bound the static code.
-        const animated = !useAppLink && started.display !== 'legacy';
+        const animated = started.display !== 'legacy';
         const qrRefreshSeconds = !animated
           ? undefined
           : typeof started.qr_refresh_seconds === 'number' && started.qr_refresh_seconds > 0
@@ -145,7 +202,7 @@ export function startLogin(
         surface.requestId = requestId;
         surface.pairUrl = started.pair_url;
         surface.qrUrl = qrBase;
-        surface.appLink = useAppLink;
+        surface.appLink = false;
 
         // Everything a pairing UI needs, on every state it sees. The modal
         // below renders from it, and so does a caller who has opted out with
@@ -156,7 +213,7 @@ export function startLogin(
           pairUrl: surface.pairUrl,
           qrUrl: surface.qrUrl,
           qrRefreshSeconds,
-          appLink: useAppLink,
+          appLink: false,
           intent,
           cancel,
         });
@@ -170,9 +227,7 @@ export function startLogin(
         // round-trip away, and a UI that waits for it opens visibly empty.
         options.onState?.(initial);
 
-        // No modal for an app-link hand-off: there is no code to scan, the
-        // phone is already being sent to the app.
-        if ((options.pairingUI ?? 'modal') === 'modal' && !useAppLink) {
+        if ((options.pairingUI ?? 'modal') === 'modal') {
           modal = mountPairingModal(initial, {
             onCancel: cancel,
             intent,
@@ -182,15 +237,6 @@ export function startLogin(
           });
         }
 
-        if (useAppLink && typeof window !== 'undefined') {
-          // The universal link, in the same tab: the app claims it, and with
-          // no app installed the same URL is the real pairing page, which can
-          // enrol. A popup here would be blocked more often than it would
-          // help. Between the tap and this line there is one round trip, so
-          // the button that was tapped should be disabled and show it is
-          // working; the promise settles or rejects when the flow ends.
-          window.location.assign(started.pair_url);
-        }
 
         if (qrRefreshSeconds !== undefined) {
           // A deadline and a setTimeout chain, not setInterval. Background
@@ -257,6 +303,8 @@ export function startLogin(
       }
 
       teardown();
+
+      }
 
       if (flow === 'auth-code') {
         const response: ZorealCodeResponse = {

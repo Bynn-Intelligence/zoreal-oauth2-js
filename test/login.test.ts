@@ -142,25 +142,6 @@ describe('startLogin, browser-direct', () => {
     expect(body.get('client_secret')).toBeNull();
   });
 
-  it("sends display 'link' when the caller asks for the app link", async () => {
-    const { calls } = stubProvider({
-      pair: json({ request_id: 'r1', pair_url: 'https://zoreal.com/login/r1?t=TOKEN', expires_in: 120, display: 'link' }),
-      statuses: [{ status: 'approved', code: 'code-1' }],
-    });
-
-    const handle = startLogin({
-      clientId: 'ast_x',
-      issuer: 'https://id.zoreal.test',
-      display: 'link',
-    });
-    const result = await handle.promise;
-
-    expect(result.select_by).toBe('app_link');
-    const pairCall = calls.find((c) => c.url.endsWith('/pair'))!;
-    expect(JSON.parse(pairCall.init!.body as string).display).toBe('link');
-    // The link carries its start token; it is navigated to verbatim.
-    expect(handle.pairUrl).toBe('https://zoreal.com/login/r1?t=TOKEN');
-  });
 
   it('moves the QR on every refresh, so a screenshot goes stale', async () => {
     useFakePollTimers();
@@ -262,29 +243,6 @@ describe('startLogin, browser-direct', () => {
     await endFlow(handle);
   });
 
-  it('does not move an app link: there is no code on screen', async () => {
-    useFakePollTimers();
-    stubProvider({
-      pair: json({ request_id: 'r1', pair_url: 'https://zoreal.com/login/r1?t=TOKEN', expires_in: 120, display: 'link' }),
-      statuses: [{ status: 'pending', expires_in: 118 }],
-    });
-
-    const states: PairingState[] = [];
-    const handle = startLogin({
-      clientId: 'ast_x',
-      issuer: 'https://id.zoreal.test',
-      display: 'link',
-      onState: (s) => states.push(s),
-    });
-    await until(() => states.length > 0);
-    await flush();
-    expect(states[0].qrRefreshSeconds).toBeUndefined();
-
-    await vi.advanceTimersByTimeAsync(30_000);
-    await flush();
-    expect(states.some((s) => s.qrUrl?.includes('?t='))).toBe(false);
-    await endFlow(handle);
-  });
 
   it('leaves a legacy pairing alone: its code does not move', async () => {
     useFakePollTimers();

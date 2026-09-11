@@ -94,6 +94,38 @@ export async function startPairing(
   return body as unknown as PairStartResponse;
 }
 
+/**
+ * The same-device sign-in, as a URL to NAVIGATE to, not to fetch.
+ *
+ * A phone's browser hands a universal link to an app only inside a
+ * navigation the person began, and a page that sets its location after a
+ * network round trip has left that navigation behind: the link then loads
+ * as a web page. So on a phone this package fetches nothing on the tap. The
+ * tap itself navigates to the provider's start endpoint with what /pair
+ * would have been sent, the provider creates the link pairing and answers
+ * with a redirect to its universal link, still inside the person's
+ * navigation, and the app opens. The page is not unloaded when it does, and
+ * polls the pairing by the `request_id` it chose here. With no app installed
+ * the same redirect lands on the page that installs it.
+ */
+export function sameDeviceStartUrl(
+  issuer: string,
+  params: StartPairingParams & { request_id: string; origin: string }
+): string {
+  const query = new URLSearchParams();
+  const all: Record<string, unknown> = {
+    ...params,
+    code_challenge_method: 'S256',
+    wire_version: WIRE_VERSION,
+    sdk: `${SDK_NAME}/${SDK_VERSION}`,
+  };
+  for (const [key, value] of Object.entries(all)) {
+    if (value === undefined || value === null || value === '') continue;
+    query.set(key, String(value));
+  }
+  return `${issuer}/pair/start?${query.toString()}`;
+}
+
 const sleep = (ms: number, signal?: AbortSignal) =>
   new Promise<void>((resolve, reject) => {
     if (signal?.aborted) {
@@ -123,13 +155,30 @@ export async function pollUntilApproved(
   issuer: string,
   requestId: string,
   onState?: (state: PairingState) => void,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  options: {
+    /**
+     * Same-device navigation only. The page starts polling while the
+     * provider is still answering the navigation that creates the pairing,
+     * so a "no such pairing" answer before this instant (epoch ms) is the
+     * pairing not existing YET, and is read as pending.
+     */
+    tolerateUnknownUntil?: number;
+  } = {}
 ): Promise<string> {
   for (;;) {
     const response = await fetch(`${issuer}/pair/${encodeURIComponent(requestId)}/status`, {
       signal,
     });
     const body = (await parseJson(response)) as unknown as PairStatusResponse;
+
+    if (response.status === 404 && (options.tolerateUnknownUntil ?? 0) > Date.now()) {
+      // Same-device navigation: the pairing is being created by the
+      // navigation this page is polling ahead of; not there YET is pending.
+      onState?.({ status: 'pending' });
+      await sleep(POLL_INTERVAL_MS, signal);
+      continue;
+    }
 
     if (!response.ok) {
       throw new OAuthFlowError(
