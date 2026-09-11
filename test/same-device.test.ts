@@ -39,9 +39,10 @@ describe('same device', () => {
       if (u.includes('/status')) {
         statusCalls.push(u);
         polls += 1;
-        // The navigation is still being answered: no such pairing yet.
-        if (polls === 1) return Promise.resolve(json({ error: 'invalid_request', error_description: 'unknown pairing request' }, 404));
-        if (polls === 2) return Promise.resolve(json({ status: 'pending', expires_in: 118 }));
+        // The navigation kills the first request, then the pairing is not there yet.
+        if (polls === 1) return Promise.reject(new TypeError('Load failed'));
+        if (polls === 2) return Promise.resolve(json({ error: 'invalid_request', error_description: 'unknown pairing request' }, 404));
+        if (polls === 3) return Promise.resolve(json({ status: 'pending', expires_in: 118 }));
         return Promise.resolve(json({ status: 'approved', code: 'code-1' }));
       }
       if (u.endsWith('/token')) {
@@ -79,17 +80,19 @@ describe('same device', () => {
     expect(document.querySelector('[role="dialog"]')).toBeNull();
 
     const requestId = q.get('request_id')!;
+    // Nothing is fetched until the navigation has had a moment to begin.
     await flush();
-    await vi.advanceTimersByTimeAsync(2100);
-    await flush();
-    await vi.advanceTimersByTimeAsync(2100);
-    await flush();
+    expect(statusCalls.length).toBe(0);
+    for (let i = 0; i < 4; i++) {
+      await vi.advanceTimersByTimeAsync(2100);
+      await flush();
+    }
     const result = await handle.promise;
 
     expect(result.select_by).toBe('app_link');
-    expect(statusCalls.length).toBeGreaterThanOrEqual(3);
+    expect(statusCalls.length).toBeGreaterThanOrEqual(4);
     for (const call of statusCalls) expect(call).toBe(`https://id.zoreal.test/pair/${requestId}/status`);
-    // The first answer, "no such pairing", was read as pending, not as failure.
+    // The killed request and the "no such pairing" were read as pending, not as failure.
     expect(states[0].status).toBe('pending');
     expect(states.every((s) => s.appLink === true && s.pairUrl === url.toString())).toBe(true);
   });
