@@ -157,7 +157,7 @@ step with the pairing, and takes it down when the flow settles. You render
 nothing.
 
 The code on screen changes every few seconds. Each image is one frame of the
-pairing, and the provider refuses a frame more than 30 seconds old, so a
+pairing, and the provider refuses a frame the sequence has moved past, so a
 screenshot of the code passed to someone else is already dead when it arrives:
 signing in needs the screen as it is right now. The provider renders the
 frames and this package re-fetches the image on the interval the provider
