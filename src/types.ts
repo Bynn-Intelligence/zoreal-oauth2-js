@@ -190,7 +190,8 @@ export interface StartLoginOptions {
   theme?: ZorealTheme;
   /**
    * How long the modal stays open before giving up and cancelling, in ms.
-   * Defaults to 120000. The provider's own expiry wins when it is shorter.
+   * Defaults to the provider's own expiry (five minutes today), or 300000
+   * when it states none; a shorter value of yours wins.
    */
   pairingTimeoutMs?: number;
 }

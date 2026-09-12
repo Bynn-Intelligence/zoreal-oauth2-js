@@ -16,8 +16,12 @@ import { titleFor } from './intent';
 import { cx, ensureStyles } from './styles';
 import type { LoginIntent, PairingState, ZorealTheme } from './types';
 
-/** Our own cap on how long a pairing sits on screen. See `pairingTimeoutMs`. */
-export const DEFAULT_PAIRING_TIMEOUT_MS = 120_000;
+/**
+ * How long a pairing sits on screen when the provider states no expiry of
+ * its own. The provider does state one (`expires_in`, five minutes today),
+ * and that is the deadline unless the site sets a shorter `pairingTimeoutMs`.
+ */
+export const DEFAULT_PAIRING_TIMEOUT_MS = 300_000;
 
 /** Below this the countdown changes colour: background information becomes a prompt to hurry. */
 const URGENT_SECONDS = 20;
@@ -144,7 +148,7 @@ export function mountPairingModal(
   ensureStyles();
 
   const t = strings(options.locale);
-  const timeoutMs = options.timeoutMs ?? DEFAULT_PAIRING_TIMEOUT_MS;
+  const timeoutMs = options.timeoutMs;
   let closed = false;
 
   const scrim = el('div', `${cx('root')} ${cx('scrim')}`);
@@ -228,8 +232,11 @@ export function mountPairingModal(
 
   // A deadline, not a decremented counter: background tabs throttle timers, so
   // a counter that subtracts one per tick comes back lying about the time left.
+  // The provider's own window is the deadline; a site's `pairingTimeoutMs` can
+  // only shorten it, never claim more time than the provider honours.
   const serverMs = typeof state.expiresIn === 'number' ? state.expiresIn * 1000 : Infinity;
-  const deadline = Date.now() + Math.min(timeoutMs, serverMs);
+  const capMs = timeoutMs ?? (Number.isFinite(serverMs) ? serverMs : DEFAULT_PAIRING_TIMEOUT_MS);
+  const deadline = Date.now() + Math.min(capMs, serverMs);
 
   // The frame swap. The provider renders a new code every few seconds and each
   // state can carry a new qrUrl. Assigning it straight to the visible <img>

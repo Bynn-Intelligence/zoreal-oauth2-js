@@ -198,6 +198,18 @@ describe('mountPairingModal', () => {
     handle.close();
   });
 
+  // Without a cap of its own the modal keeps the provider's whole window, and
+  // only falls back to its own default when the provider states none.
+  it('follows the provider\'s expiry by default', () => {
+    vi.useFakeTimers();
+    const { handle } = mount({ ...pending, expiresIn: 300 });
+    expect(document.body.textContent).toContain('5:00');
+    handle.close();
+    const { handle: bare } = mount({ ...pending, expiresIn: undefined });
+    expect(document.body.textContent).toContain('5:00');
+    bare.close();
+  });
+
   it('close is idempotent and leaves nothing behind', () => {
     const { handle } = mount();
     handle.close();

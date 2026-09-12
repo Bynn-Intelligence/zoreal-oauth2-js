@@ -170,7 +170,7 @@ is nothing to configure and nothing to draw.
 | **Live status** | Copy and title follow the pairing: waiting for a scan, then waiting for approval once the code is claimed (the spent QR blurs out behind a phone glyph). |
 | **Title** | Says what the scan is for, inferred from the request: "Scan to sign in" for `openid`, `email` and `profile.name`; "Scan to verify your identity" once a document attribute such as `zoreal.age` or `profile.birthdate` is requested; "Scan to prove you are a real human" for `openid` alone with `acr_values: 'zoreal.live'`. Override with `intent`, one of `'sign-in'`, `'identify'`, `'presence'`, when the scope does not say. |
 | **Countdown** | Counts down to expiry, turning amber under 20s. Reads the clock each tick rather than decrementing, so a backgrounded tab comes back honest. |
-| **Timeout** | Closes and cancels at zero. Defaults to 120s; override with `pairingTimeoutMs`. The provider's own expiry wins when it is shorter. |
+| **Timeout** | Closes and cancels at zero. Follows the provider's expiry (five minutes); `pairingTimeoutMs` can shorten it, never extend it. |
 | **Cancel** | The X, the Cancel button, `Escape`, clicking outside and the timeout are one behaviour: abort the poll, close, reject the promise with `AbortError`. |
 | **No ZOREAL ID yet** | A footer says the same code also installs the app. Without it the panel reads as "scan this with something I do not have", and the flow dead-ends at the one moment it can still be recovered. |
 | **Themes** | `theme: 'auto'` (default) follows `prefers-color-scheme`; `'light'` and `'dark'` force it. In dark mode the code is drawn light on the dark surface, the mark included, and the light around it runs brighter and wider. |
@@ -182,7 +182,7 @@ startLogin({
   clientId: 'ast_your_asset_id',
   locale: 'sv',        // omit to follow the browser
   theme: 'auto',       // 'light' | 'dark'
-  pairingTimeoutMs: 120_000,
+  pairingTimeoutMs: 120_000, // shorten the provider's five minutes; omit to keep them
 });
 ```
 
@@ -406,7 +406,7 @@ enforced where enforcement counts: on your backend, against the verified token.
 | `unsafeClaims(idToken)` | reads claims without verifying. Convenience only; verification happens server-side |
 | `isMobileUserAgent()` | whether this user agent gets the app link rather than a QR |
 | `mountPairingModal(state, { onCancel, locale?, theme?, timeoutMs? })` | mounts the dialog yourself, for `pairingUI: 'none'` callers who still want the real one. Returns `{ update, close }`, or `null` outside a browser |
-| `DEFAULT_PAIRING_TIMEOUT_MS` | `120000`, the modal's default cap |
+| `DEFAULT_PAIRING_TIMEOUT_MS` | `300000`, the modal's cap when the provider states no expiry |
 | `DEFAULT_QR_REFRESH_SECONDS` | `3`, how often the QR frame is re-fetched when the provider does not say |
 
 Errors: `OAuthFlowError` (the provider refused; `error` is the OAuth code,
@@ -417,7 +417,7 @@ provider). `cancel()` rejects with a `DOMException` named `AbortError`.
 
 `startLogin` options controlling the built-in modal: `pairingUI`
 (`'modal'` default, `'none'` to render your own), `theme` (`'auto'` default,
-`'light'`, `'dark'`), `pairingTimeoutMs` (120000 default), and `locale`, which
+`'light'`, `'dark'`), `pairingTimeoutMs` (the provider's expiry by default), and `locale`, which
 is sent to the provider AND picks the modal's own language. See
 [The pairing modal](#the-pairing-modal).
 
