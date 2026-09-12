@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from 'vitest';
-import { controlFrom, holdBusy } from '../src/busy';
+import { controlFrom, cornerOf, holdBusy } from '../src/busy';
 
 afterEach(() => {
   document.body.innerHTML = '';
@@ -44,5 +44,25 @@ describe('holding a control busy', () => {
     expect(controlFrom({ currentTarget: null })).toBeNull();
     expect(controlFrom(undefined)).toBeNull();
     expect(controlFrom('click')).toBeNull();
+  });
+});
+
+describe('the ring corner for the control it sits on', () => {
+  // An SVG rect clamps rx to half its width and ry to half its height on their
+  // own, so a pill's radius copied into both made an ellipse: the clamp must
+  // happen before the rect sees the value.
+  it('turns a pill radius into the half height, however it is spelled', () => {
+    expect(cornerOf('9999px', 720, 68)).toEqual([36, 36]);
+    expect(cornerOf('3.35544e+07px', 720, 68)).toEqual([36, 36]);
+    expect(cornerOf('calc(infinity * 1px)', 720, 68)).toEqual([36, 36]);
+  });
+
+  it('keeps a small radius as it is, and follows a percentage per axis', () => {
+    expect(cornerOf('12px', 300, 44)).toEqual([14, 14]);
+    expect(cornerOf('50%', 300, 44)).toEqual([152, 24]);
+  });
+
+  it('never exceeds half the width of a narrow control', () => {
+    expect(cornerOf('9999px', 40, 68)).toEqual([22, 22]);
   });
 });

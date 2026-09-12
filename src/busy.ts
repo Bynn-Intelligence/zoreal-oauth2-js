@@ -19,9 +19,27 @@ const TAIL = 0.3;
 const STACK = Array.from({ length: 12 }, (_, i) => 12 - i);
 const HALO = [3, 2, 1];
 
-function radiusOf(control: HTMLElement): number {
-  const value = parseFloat(getComputedStyle(control).borderTopLeftRadius);
-  return Number.isFinite(value) ? value : 8;
+/**
+ * The control's corner as the two radii an SVG rect takes, for a box of the
+ * given size. A pill's CSS radius is "9999px", or from Tailwind v4 a float
+ * near infinity, and an SVG rect clamps rx to half its width and ry to half
+ * its height SEPARATELY: copying such a value into both turned a pill into an
+ * ellipse, with the light bulging past the button's straight edges. The clamp
+ * to the shorter half-side happens here instead, once the box is known. A
+ * percentage radius is a percentage of each side in CSS too, so it is honoured
+ * per axis. The 2px is the ring's offset outside the box (styles.ts), kept so
+ * the corners stay concentric with the control's.
+ */
+export function cornerOf(radius: string, width: number, height: number): [number, number] {
+  const raw = radius.trim();
+  const value = parseFloat(raw);
+  const offset = 2;
+  if (raw.endsWith('%') && Number.isFinite(value)) {
+    return [(width * value) / 100 + offset, (height * value) / 100 + offset];
+  }
+  const px = Number.isFinite(value) ? value : /infinity/i.test(raw) ? Infinity : 8;
+  const r = Math.min(px, width / 2, height / 2) + offset;
+  return [r, r];
 }
 
 export function holdBusy(control: HTMLElement): () => void {
@@ -44,12 +62,11 @@ export function holdBusy(control: HTMLElement): () => void {
   overlay.setAttribute('aria-hidden', 'true');
   const svg = document.createElementNS(SVG_NS, 'svg');
   svg.setAttribute('class', cx('ring-svg'));
-  const rx = radiusOf(control) + 2;
+  const rects: SVGRectElement[] = [];
   const layer = (name: string, len: number, alpha: string) => {
     const rect = document.createElementNS(SVG_NS, 'rect');
     rect.setAttribute('class', cx(name));
-    rect.setAttribute('rx', String(rx));
-    rect.setAttribute('ry', String(rx));
+    rects.push(rect);
     rect.style.strokeDasharray = `calc(var(--zrl-l) * ${len}) calc(var(--zrl-l) * ${1 - len})`;
     rect.style.setProperty('--zrl-s', `calc(var(--zrl-l) * ${-(TAIL - len)})`);
     rect.style.opacity = alpha;
@@ -75,6 +92,11 @@ export function holdBusy(control: HTMLElement): () => void {
     overlay.style.top = `${box.top}px`;
     overlay.style.width = `${box.width}px`;
     overlay.style.height = `${box.height}px`;
+    const [rx, ry] = cornerOf(getComputedStyle(control).borderTopLeftRadius, box.width, box.height);
+    for (const rect of rects) {
+      rect.setAttribute('rx', String(rx));
+      rect.setAttribute('ry', String(ry));
+    }
     const length = typeof measured?.getTotalLength === 'function' ? measured.getTotalLength() : 0;
     if (length > 0) overlay.style.setProperty('--zrl-ring-len', `${length}px`);
   };
