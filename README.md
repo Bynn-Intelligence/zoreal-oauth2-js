@@ -361,7 +361,7 @@ In browser-direct mode the resolved level is on the credential response as
 proves nothing on its own, because a browser is attacker-controlled. The proof is
 the **signed `acr` claim**, minted by ZOREAL, verified on your **backend** — the
 ZOREAL backend libraries (`zoreal-oauth2` for Ruby and its siblings for Node,
-Python, PHP, Go, JVM and .NET) take a required-acr argument at exchange and
+Python, PHP, Go, JVM, .NET and Rust) take a required-acr argument at exchange and
 refuse a token below the level. A relying party that requests `zoreal.live` but
 never verifies the claim has checked nothing.
 
@@ -747,6 +747,7 @@ npm audit signatures
 | zoreal-oauth2-go | github.com/Bynn-Intelligence/zoreal-oauth2-go | Go backend |
 | zoreal-oauth2-java | com.zoreal:oauth2 (Maven Central) | JVM backend |
 | zoreal-oauth2-dotnet | Zoreal.OAuth2 (NuGet) | .NET backend |
+| zoreal-oauth2-rust | zoreal-oauth2 (crates.io) | Rust backend |
 
 ## License
 
